@@ -31,8 +31,9 @@ logs_path = 'log/rnn_words'
 # Text file containing words for training
 training_path = '/home/d/workspace/java/eclipse/work/lib/'
 write_path = '/home/d/workspace/java/eclipse/work/write/'
-#wordmodel = word2vec.load('/home/d/combine100.bin')
-#tagmodel=word2vec.load('/home/d/tagmodel100.bin')
+wordmodel = word2vec.load('/home/d/combine100.bin')
+tagmodel=word2vec.load('/home/d/tagmodel100.bin')
+#tagmodel=word2vec.load('/home/d/1.bin')
 
 def list_tags():
     set1=set()
@@ -55,16 +56,14 @@ def list_tags():
                         if tag[0]=='(':
                             tag=tag[1:]
                             stack.append(tag)
-                            output+=(''.join(stack))
-                            set1.add(''.join(stack))
-                            output+=' '
+                            try:
+                                aa=tagmodel[''.join(stack)]
+                            except:
+                                print(''.join(stack))
                         else:
                             stack=stack[:-1]
                     output+='\n'
-    with open(os.path.join(write_path,'1.txt'),'w') as f:
-        f.write(output)
-    print(len(set1))
-    print(set1.pop())
+
                 
                 
 
