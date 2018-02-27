@@ -1,4 +1,4 @@
-#tt1 词向量补完
+
 from __future__ import print_function
 
 import numpy as np
@@ -32,13 +32,23 @@ def read_path():
             mlist.remove(inputfile)
     return random.sample(mlist,len(mlist))
 
-model=word2vec.load('/home/d/tagmodel100.bin')
-sentences=model.vocab.tolist()#每一个长词是一个句子
-words=[]
-for i in sentences:
-    words.extend('_'.split(i))#ROOT一类的短词
+def read_data(
 
-def build_dataset(words):#words 单词list
+    with open(fname) as f:
+        content = f.readlines()
+    print 'loaded data'
+    content=json.loads(content)
+    print 'parsed data'
+    content = [x.strip() for x in content]
+    content = [content[i].split() for i in range(len(content))]
+    content = np.array(content)
+    content = np.reshape(content, [-1, ])
+    return content
+
+training_data = read_data(training_file)
+print("Loaded training data...")
+
+def build_dataset(words):
     count = collections.Counter(words).most_common()
     dictionary = dict()
     for word, _ in count:
@@ -46,14 +56,14 @@ def build_dataset(words):#words 单词list
     reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
     return dictionary, reverse_dictionary
 
-dictionary, reverse_dictionary = build_dataset(words)
-vocab_size = 100#输出长度
+dictionary, reverse_dictionary = build_dataset(training_data)
+vocab_size = len(dictionary)
 
 # Parameters
 learning_rate = 0.001
 training_iters = 50000
 display_step = 1000
-n_input = 3 
+n_input = 3
 
 # number of units in RNN cell
 n_hidden = 512
@@ -87,6 +97,7 @@ def RNN(x, weights, biases):
     # Average Accuracy= 90.60% 50k iter
     # Uncomment line below to test but comment out the 2-layer rnn.MultiRNNCell above
     # rnn_cell = rnn.BasicLSTMCell(n_hidden)
+
     # generate prediction
     outputs, states = rnn.static_rnn(rnn_cell, x, dtype=tf.float32)
 
@@ -97,9 +108,7 @@ def RNN(x, weights, biases):
 pred = RNN(x, weights, biases)
 
 # Loss and optimizer
-#cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
-diff=pred-y
-cost=tf.matmul(tf.reshape(diff,[1,-1])
+cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
 optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # Model evaluation
@@ -113,6 +122,8 @@ init = tf.global_variables_initializer()
 with tf.Session() as session:
     session.run(init)
     step = 0
+    offset = random.randint(0,n_input+1)
+    end_offset = n_input + 1
     acc_total = 0
     loss_total = 0
 
@@ -120,15 +131,18 @@ with tf.Session() as session:
 
     while step < training_iters:
         # Generate a minibatch. Add some randomness on selection process.
-        question=random.sample(sentences,1)#answer=model[question]
-        symbols_in_keys = [dictionary[i] for i in ' '.split(question)]
+        if offset > (len(training_data)-end_offset):
+            offset = random.randint(0, n_input+1)
+
+        symbols_in_keys = [ [dictionary[ str(training_data[i])]] for i in range(offset, offset+n_input) ]
         symbols_in_keys = np.reshape(np.array(symbols_in_keys), [-1, n_input, 1])
 
-        symbols_out_onehot = model[question]#输出:一个100维的词向量---但不是onehot的
+        symbols_out_onehot = np.zeros([vocab_size], dtype=float)
+        symbols_out_onehot[dictionary[str(training_data[offset+n_input])]] = 1.0
         symbols_out_onehot = np.reshape(symbols_out_onehot,[1,-1])
 
         _, acc, loss, onehot_pred = session.run([optimizer, accuracy, cost, pred], \
-                                                feed_dict={x: symbols_in_keys, y: symbols_out_onehot})#输入
+                                                feed_dict={x: symbols_in_keys, y: symbols_out_onehot})
         loss_total += loss
         acc_total += acc
         if (step+1) % display_step == 0:
@@ -137,11 +151,12 @@ with tf.Session() as session:
                   "{:.2f}%".format(100*acc_total/display_step))
             acc_total = 0
             loss_total = 0
-            #symbols_in = [training_data[i] for i in range(offset, offset + n_input)]
-            #symbols_out = training_data[offset + n_input]
-            #symbols_out_pred = reverse_dictionary[int(tf.argmax(onehot_pred, 1).eval())]
-            #print("%s - [%s] vs [%s]" % (symbols_in,symbols_out,symbols_out_pred))
+            symbols_in = [training_data[i] for i in range(offset, offset + n_input)]
+            symbols_out = training_data[offset + n_input]
+            symbols_out_pred = reverse_dictionary[int(tf.argmax(onehot_pred, 1).eval())]
+            print("%s - [%s] vs [%s]" % (symbols_in,symbols_out,symbols_out_pred))
         step += 1
+        offset += (n_input+1)
     print("Optimization Finished!")
     print("Elapsed time: ", elapsed(time.time() - start_time))
     print("Run on command line.")
