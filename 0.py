@@ -1,4 +1,3 @@
-
 from __future__ import print_function
 
 import numpy as np
@@ -7,7 +6,6 @@ from tensorflow.contrib import rnn
 import random
 import collections
 import time
-import json
 
 start_time = time.time()
 def elapsed(sec):
@@ -20,12 +18,11 @@ def elapsed(sec):
 
 
 # Target log path
-logs_path = 'log/rnn_words'
+logs_path = '/tmp/tensorflow/rnn_words'
 writer = tf.summary.FileWriter(logs_path)
 
 # Text file containing words for training
-training_path = '/home/d/one.txt'
-
+training_file = '/home/d/one.txt'
 
 def read_data(fname):
     with open(fname) as f:
@@ -33,17 +30,18 @@ def read_data(fname):
     content = [x.strip() for x in content]
     content = [content[i].split() for i in range(len(content))]
     content = np.array(content)
-    content = np.reshape(content, [-1, ])
+    content=sum(content,[])
+    print(content[0])
     return content
 
-training_data = read_data(training_path)
+training_data = read_data(training_file)
 print("Loaded training data...")
 
 def build_dataset(words):
-    count = collections.Counter(words).most_common()
     dictionary = dict()
-    for word, _ in count:
-        dictionary[word] = len(dictionary)
+    for word in words:
+        if word not in dictionary:
+            dictionary[word] = len(dictionary)
     reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
     return dictionary, reverse_dictionary
 
@@ -126,11 +124,12 @@ with tf.Session() as session:
             offset = random.randint(0, n_input+1)
 
         symbols_in_keys = [ [dictionary[ str(training_data[i])]] for i in range(offset, offset+n_input) ]
-        symbols_in_keys = np.reshape(np.array(symbols_in_keys), [-1, n_input, 1])
+        symbols_in_keys = np.reshape(np.array(symbols_in_keys), [-1, n_input, 1]).tolist()
 
         symbols_out_onehot = np.zeros([vocab_size], dtype=float)
         symbols_out_onehot[dictionary[str(training_data[offset+n_input])]] = 1.0
-        symbols_out_onehot = np.reshape(symbols_out_onehot,[1,-1])
+        symbols_out_onehot = np.reshape(symbols_out_onehot,[1,-1]).tolist()
+#        print(symbols_in_keys.shape,symbols_out_onehot.shape)
 
         _, acc, loss, onehot_pred = session.run([optimizer, accuracy, cost, pred], \
                                                 feed_dict={x: symbols_in_keys, y: symbols_out_onehot})
@@ -172,4 +171,3 @@ with tf.Session() as session:
             print(sentence)
         except:
             print("Word not in dictionary")
-

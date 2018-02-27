@@ -1,4 +1,5 @@
 #encoding:utf-8
+#n0.py: copied down
 from __future__ import print_function
 
 import numpy as np
@@ -32,7 +33,7 @@ embedding_size=100
 model=word2vec.load('/home/d/combine100.bin')
 # Text file containing words for training
 training_path = '/home/d/parseword'
-maxlength=1000
+maxlength=100
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 
 
@@ -103,13 +104,10 @@ def list_tags(st,step):
                         tagword[0]=1
                         for _ in range(len(node.group(2))-1):
                             outword.append(tagword)
-        print('out+')
         outword=np.array(outword)
         if realength<outword.shape[0]:
             realength=max(realength,outword.shape[0])
-            print(realength)
-        if realength>maxlength:
-            print('lengtherror')
+        assert(realength<=maxlength)
         pads.append(outword.shape[0])
         outword=np.pad(outword,((0,maxlength-outword.shape[0]),(0,0)),'constant')
         inputs.append(outword)
@@ -117,44 +115,75 @@ def list_tags(st,step):
     answers=np.zeros((len(answer),len(verbtags)))
     for num in range(len(answer)):
         answers[num][answer[num]]=1
-    print(answers.shape)
     return inputs,pads,answers
 
 
 print('init:2')
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#dictionary, reverse_dictionary = build_dataset(training_data)
+#vocab_size = len(dictionary)
+
 # Parameters
 learning_rate = 0.001
-training_iters = 50000
-display_step = 1000
+training_iters = 100
 training_steps=10
+display_step = 5
 
 # number of units in RNN cell
 n_hidden = 512
 
+vocab_size=len(verbtags)
 # tf Graph input
-x = tf.placeholder("float", [training_steps, maxlength, embedding_size])
-y = tf.placeholder("float", [training_steps, len(verbtags)])
-p = tf.placeholder("float", [training_steps])
+#x = tf.placeholder("float", [None, n_input, 1])
+#y = tf.placeholder("float", [None, vocab_size])
+x = tf.placeholder("float", [None, maxlength, embedding_size])
+y = tf.placeholder("float", [None, len(verbtags)])
 
 # RNN output node weights and biases
 weights = {
-    'out': tf.Variable(tf.random_normal([n_hidden, len(verbtags)]))
+    'out': tf.Variable(tf.random_normal([n_hidden, vocab_size]))
 }
 biases = {
-    'out': tf.Variable(tf.random_normal([len(verbtags)]))
+    'out': tf.Variable(tf.random_normal([vocab_size]))
 }
 
-def RNN(session,inputs, weights, biases, pads,answers):
-
-    # reshape to [1, n_input]
-    #print(tf.shape(x).eval())
-    #x = tf.reshape(x, [-1, n_input])
+def RNN(x, weights, biases):
+    #x = tf.reshape(x, [-1, maxlength])
 
     # Generate a n_input-element sequence of inputs
     # (eg. [had] [a] [general] -> [20] [6] [33])
-    #x = tf.split(x,n_input,1)
+    #x = tf.split(x,maxlength,1)
+    x=tf.unstack(x,axis=2)
 
     # 2-layer LSTM, each layer has n_hidden units.
     # Average Accuracy= 95.20% at 50k iter
@@ -166,33 +195,28 @@ def RNN(session,inputs, weights, biases, pads,answers):
     # rnn_cell = rnn.BasicLSTMCell(n_hidden)
 
     # generate prediction
-    print('1')
-    outputs, states = tf.nn.dynamic_rnn(rnn_cell, x, p, dtype=tf.float32)
-    print(tf.shape(outputs).eval())
+    outputs, states = rnn.static_rnn(rnn_cell, x, dtype=tf.float32)
 #input: [10 1000 100]
 #output: [10 1000 512]
-    outputs=tf.transpose(outputs,[1,0,2])
+    #outputs=tf.transpose(outputs,[1,0,2])
 
     # there are n_input outputs but
     # we only want the last output
-    pred=tf.matmul(outputs[-1], weights['out']) + biases['out']
+    return tf.matmul(outputs[-1], weights['out']) + biases['out']
 
+pred = RNN(x, weights, biases)
 
 # Loss and optimizer
-    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
-    optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate).minimize(cost)
+cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
+optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # Model evaluation
-    correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
-    accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-    print(type(inputs),type(answers))
-    print('2')
-    session.run([optimizer, accuracy, cost, pred], feed_dict={x: inputs, y: answers })#???
-    print('2')
-    
+correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
+accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
 # Initializing the variables
 init = tf.global_variables_initializer()
+print('ready')
 
 # Launch the graph
 with tf.Session() as session:
@@ -202,20 +226,11 @@ with tf.Session() as session:
     loss_total = 0
 
     writer.add_graph(session.graph)
-    #for training_iters in range(20717):
-    for training_iters in range(207):
-        # Generate a minibatch. Add some randomness on selection process.
-        '''
-        symbols_in_keys = [ [dictionary[ str(training_data[i])]] for i in range(offset, offset+n_input) ]
-        symbols_in_keys = np.reshape(np.array(symbols_in_keys), [-1, n_input, 1])
 
-        symbols_out_onehot = np.zeros([vocab_size], dtype=float)
-        symbols_out_onehot[dictionary[str(training_data[offset+n_input])]] = 1.0
-        symbols_out_onehot = np.reshape(symbols_out_onehot,[1,-1])
-        '''
-        inputs,pads,answers=list_tags(training_iters*training_steps,training_steps)
-        print(inputs.shape)
-        _, acc, loss, onehot_pred = RNN(session,inputs,weights,biases,pads,answers)
+    while step < training_iters:
+        inputs,pads,answers=list_tags(step*training_steps,training_steps)
+        _, acc, loss, onehot_pred = session.run([optimizer, accuracy, cost, pred], \
+                                                feed_dict={x: inputs, y: answers})
         loss_total += loss
         acc_total += acc
         if (step+1) % display_step == 0:
@@ -224,14 +239,28 @@ with tf.Session() as session:
                   "{:.2f}%".format(100*acc_total/display_step))
             acc_total = 0
             loss_total = 0
-            '''
-            symbols_in = [training_data[i] for i in range(offset, offset + n_input)]
-            symbols_out = training_data[offset + n_input]
-            symbols_out_pred = reverse_dictionary[int(tf.argmax(onehot_pred, 1).eval())]
-            print("%s - [%s] vs [%s]" % (symbols_in,symbols_out,symbols_out_pred))
-            '''
         step += 1
     print("Optimization Finished!")
     print("Elapsed time: ", elapsed(time.time() - start_time))
     print("Run on command line.")
     print("\ttensorboard --logdir=%s" % (logs_path))
+    print("Point your web browser to: http://localhost:6006/")
+    while True:
+        prompt = "%s words: " % n_input
+        sentence = input(prompt)
+        sentence = sentence.strip()
+        words = sentence.split(' ')
+        if len(words) != n_input:
+            continue
+        try:
+            symbols_in_keys = [dictionary[str(words[i])] for i in range(len(words))]
+            for i in range(32):
+                keys = np.reshape(np.array(symbols_in_keys), [-1, n_input, 1])
+                onehot_pred = session.run(pred, feed_dict={x: keys})
+                onehot_pred_index = int(tf.argmax(onehot_pred, 1).eval())
+                sentence = "%s %s" % (sentence,reverse_dictionary[onehot_pred_index])
+                symbols_in_keys = symbols_in_keys[1:]
+                symbols_in_keys.append(onehot_pred_index)
+            print(sentence)
+        except:
+            print("Word not in dictionary")

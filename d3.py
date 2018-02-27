@@ -136,7 +136,6 @@ n_hidden = 512
 # tf Graph input
 x = tf.placeholder("float", [training_steps, maxlength, embedding_size])
 y = tf.placeholder("float", [training_steps, len(verbtags)])
-p = tf.placeholder("float", [training_steps])
 
 # RNN output node weights and biases
 weights = {
@@ -146,7 +145,7 @@ biases = {
     'out': tf.Variable(tf.random_normal([len(verbtags)]))
 }
 
-def RNN(session,inputs, weights, biases, pads,answers):
+def RNN(inputs, weights, biases, pads,answers):
 
     # reshape to [1, n_input]
     #print(tf.shape(x).eval())
@@ -167,7 +166,7 @@ def RNN(session,inputs, weights, biases, pads,answers):
 
     # generate prediction
     print('1')
-    outputs, states = tf.nn.dynamic_rnn(rnn_cell, x, p, dtype=tf.float32)
+    outputs, states = rnn.static_rnn(rnn_cell, x, dtype=tf.float32)
     print(tf.shape(outputs).eval())
 #input: [10 1000 100]
 #output: [10 1000 512]
@@ -185,9 +184,8 @@ def RNN(session,inputs, weights, biases, pads,answers):
 # Model evaluation
     correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-    print(type(inputs),type(answers))
     print('2')
-    session.run([optimizer, accuracy, cost, pred], feed_dict={x: inputs, y: answers })#???
+    session.run([optimizer, accuracy, cost, pred], feed_dict={x: inputs, y: answers})#???
     print('2')
     
 
@@ -215,7 +213,7 @@ with tf.Session() as session:
         '''
         inputs,pads,answers=list_tags(training_iters*training_steps,training_steps)
         print(inputs.shape)
-        _, acc, loss, onehot_pred = RNN(session,inputs,weights,biases,pads,answers)
+        _, acc, loss, onehot_pred = RNN(inputs,weights,biases,pads,answers)
         loss_total += loss
         acc_total += acc
         if (step+1) % display_step == 0:

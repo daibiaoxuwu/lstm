@@ -1,4 +1,5 @@
 #encoding:utf-8
+#n4.py:dynamic rnn
 from __future__ import print_function
 
 import numpy as np
@@ -126,7 +127,7 @@ print('init:2')
 learning_rate = 0.004
 training_iters = 1000
 training_steps=10
-display_step = 5
+display_step = 20
 
 # number of units in RNN cell
 n_hidden = 512
