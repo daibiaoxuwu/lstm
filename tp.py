@@ -35,8 +35,8 @@ maxlength=1000
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 
 
-
 model=word2vec.load('/home/d/combine100.bin')
+
 with open(training_path) as f:
     resp = f.readlines()
 
@@ -55,7 +55,6 @@ def list_tags():
     inputs=[]
     pads=[]
     answer=[]
-    mm=[0]*6
     for sentence in resp:#一个sentence是一句话
         total=0
         for tag in sentence.split():
@@ -74,8 +73,7 @@ def list_tags():
                 else:
                     mdflag=0
                     if tag[1:] in verbtags:
-                        
-                        mm[verbtags.index(tag[1:])]+=1
+                        answer.append(verbtags.index(tag[1:]))
                         tag='(VB'
                         vbflag=1
                     else:
@@ -107,6 +105,17 @@ def list_tags():
                         tagword[0]=1
                         for _ in range(len(node.group(2))-1):
                             outword.append(tagword)
-    print(mm)
-    return
+        print(temp)
+        outword=np.array(outword)
+        if outword.shape[0]>maxlength:
+            answer=answer[:-1]
+            continue
+        pads.append(outword.shape[0])
+        outword=np.pad(outword,((0,maxlength-outword.shape[0]),(0,0)),'constant')
+        inputs.append(outword)
+    inputs=np.array(inputs)
+    answers=np.zeros((len(answer),len(verbtags)))
+    for num in range(len(answer)):
+        answers[num][answer[num]]=1
+    return inputs,pads,answers
 list_tags()

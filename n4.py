@@ -124,7 +124,7 @@ print('init:2')
 #vocab_size = len(dictionary)
 
 # Parameters
-learning_rate = 0.004
+learning_rate = 0.001
 training_iters = 1000
 training_steps=10
 display_step = 20
@@ -156,7 +156,7 @@ def RNN(x, p, weights, biases):
 
     # 2-layer LSTM, each layer has n_hidden units.
     # Average Accuracy= 95.20% at 50k iter
-    rnn_cell = rnn.MultiRNNCell([rnn.BasicLSTMCell(n_hidden),rnn.BasicLSTMCell(n_hidden)])
+    rnn_cell = rnn.MultiRNNCell([rnn.BasicLSTMCell(n_hidden),rnn.BasicLSTMCell(n_hidden),rnn.BasicLSTMCell(n_hidden),rnn.BasicLSTMCell(n_hidden)])
 
     # 1-layer LSTM with n_hidden units but with lower accuracy.
     # Average Accuracy= 90.60% 50k iter
