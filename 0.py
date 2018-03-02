@@ -6,8 +6,8 @@ from tensorflow.contrib import rnn
 import random
 import collections
 import time
+import math
 
-start_time = time.time()
 def elapsed(sec):
     if sec<60:
         return str(sec) + " sec"
@@ -18,11 +18,11 @@ def elapsed(sec):
 
 
 # Target log path
-logs_path = '/tmp/tensorflow/rnn_words'
+logs_path = 'log/rnn_words'
 writer = tf.summary.FileWriter(logs_path)
 
 # Text file containing words for training
-training_file = '/home/d/one.txt'
+training_file = '../one.txt'
 
 def read_data(fname):
     with open(fname) as f:
@@ -46,13 +46,16 @@ def build_dataset(words):
     return dictionary, reverse_dictionary
 
 dictionary, reverse_dictionary = build_dataset(training_data)
+ctr=collections.Counter(training_data)
+#ctrdict = dict(zip(dictionary[ctr.keys()], ctr.values()))
 vocab_size = len(dictionary)
+print('voacb_size:',vocab_size)
 
 # Parameters
 learning_rate = 0.001
-training_iters = 50000
-display_step = 1000
-n_input = 3
+training_iters = 500000
+display_step = 5000
+n_input = 5
 
 # number of units in RNN cell
 n_hidden = 512
@@ -118,6 +121,7 @@ with tf.Session() as session:
 
     writer.add_graph(session.graph)
 
+    start_time=time.time()
     while step < training_iters:
         # Generate a minibatch. Add some randomness on selection process.
         if offset > (len(training_data)-end_offset):
@@ -127,7 +131,9 @@ with tf.Session() as session:
         symbols_in_keys = np.reshape(np.array(symbols_in_keys), [-1, n_input, 1]).tolist()
 
         symbols_out_onehot = np.zeros([vocab_size], dtype=float)
-        symbols_out_onehot[dictionary[str(training_data[offset+n_input])]] = 1.0
+        #symbols_out_onehot[dictionary[str(training_data[offset+n_input])]] = 1.0
+        #add penalties for frequent words
+        symbols_out_onehot[dictionary[str(training_data[offset+n_input])]] = math.log(1.0+ctr[str(training_data[offset+n_input])])
         symbols_out_onehot = np.reshape(symbols_out_onehot,[1,-1]).tolist()
 #        print(symbols_in_keys.shape,symbols_out_onehot.shape)
 
@@ -145,10 +151,11 @@ with tf.Session() as session:
             symbols_out = training_data[offset + n_input]
             symbols_out_pred = reverse_dictionary[int(tf.argmax(onehot_pred, 1).eval())]
             print("%s - [%s] vs [%s]" % (symbols_in,symbols_out,symbols_out_pred))
+            print("Elapsed time: ", elapsed(time.time() - start_time))
+            start_time=time.time()
         step += 1
         offset += (n_input+1)
     print("Optimization Finished!")
-    print("Elapsed time: ", elapsed(time.time() - start_time))
     print("Run on command line.")
     print("\ttensorboard --logdir=%s" % (logs_path))
     print("Point your web browser to: http://localhost:6006/")

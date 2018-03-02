@@ -29,17 +29,18 @@ def elapsed(sec):
 logs_path = 'log/rnn_words'
 writer = tf.summary.FileWriter(logs_path)
 embedding_size=100
+patchlength=3
 
-model=word2vec.load('/home/d/combine100.bin')
+model=word2vec.load('D:\djl\combine100.bin')
 # Text file containing words for training
-training_path = '/home/d/parseword1'
-maxlength=1000
+training_path = 'D:\djl\parseword11'
+maxlength=700
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 
 
 
 with open(training_path) as f:
-    resp = f.readlines()
+    resp = f.readlines()[:300]
 
 #len:2071700
 print('init:1')
@@ -58,18 +59,47 @@ def list_tags(st,step):
     answer=[]
     count=st
     for sentence in resp[st:]:#一个sentence是一句话
+        if len(answer)==step:
+            break
+        outword=[]
         count+=1
         total=0
+        
         for tag in sentence.split():
             if tag[0]=='(':
                 if tag[1:] in verbtags:
                     total+=1
         if total!=1:
             continue
+        
+        for oldsentence in resp[count-patchlength:count]:
+            
+        
+            for tag in sentence.split():
+                if tag[0]=='(':
+                    if tag not in tagdict:
+                        tagdict[tag]=len(tagdict)
+                    tagword=[0]*embedding_size
+                    tagword[tagdict[tag]]=1
+                    outword.append(tagword)
+                else:                
+                    node=re.match('([^\)]+)(\)*)',tag.strip())
+                    if node:
+                        if node.group(1) in model:
+                            outword.append(model[node.group(1)].tolist())
+                        else:
+                            outword.append([0]*embedding_size)
+                        tagword=[0]*embedding_size
+                        tagword[0]=1
+                        for _ in range(len(node.group(2))-1):
+                            outword.append(tagword)
 
-        if len(answer)==step:
-            break
-        outword=[]
+
+
+                            
+        
+
+        
         for tag in sentence.split():
             if tag[0]=='(':
                 if tag=='(MD':
@@ -108,6 +138,7 @@ def list_tags(st,step):
                             outword.append(tagword)
         outword=np.array(outword)
         if outword.shape[0]>maxlength:
+            print('pass')
             answer=answer[:-1]
             continue
         pads.append(outword.shape[0])
@@ -125,9 +156,9 @@ print('init:2')
 
 # Parameters
 learning_rate = 0.001
-training_iters = 1000
-training_steps=2
-display_step = 1
+training_iters = 10000
+training_steps=1
+display_step = 100
 
 # number of units in RNN cell
 n_hidden = 512
@@ -152,11 +183,11 @@ def RNN(x, p, weights, biases):
     # Generate a n_input-element sequence of inputs
     # (eg. [had] [a] [general] -> [20] [6] [33])
     #x = tf.split(x,maxlength,1)
-    #x=tf.unstack(x,axis=2)
+    #x=tf.unstack(x,maxlength,axis=1)
 
     # 2-layer LSTM, each layer has n_hidden units.
     # Average Accuracy= 95.20% at 50k iter
-    rnn_cell = rnn.MultiRNNCell([rnn.BasicLSTMCell(n_hidden),rnn.BasicLSTMCell(256)])
+    rnn_cell = rnn.MultiRNNCell([rnn.BasicLSTMCell(512),rnn.BasicLSTMCell(256)])
 
     # 1-layer LSTM with n_hidden units but with lower accuracy.
     # Average Accuracy= 90.60% 50k iter
@@ -196,12 +227,14 @@ with tf.Session() as session:
 
     writer.add_graph(session.graph)
 
-    count=0
+    count=patchlength
     while step < training_iters:
         count,inputs,pads,answers=list_tags(count,training_steps)
         if count>=len(resp):
-            count=0
-            learning_rate*=0.5
+            count=patchlength
+            print('epoch:',learning_rate)
+            #learning_rate*=0.7
+            continue
         _, acc, loss, onehot_pred = session.run([optimizer, accuracy, cost, pred], \
                                                 feed_dict={x: inputs, y: answers, p:pads})
         loss_total += loss

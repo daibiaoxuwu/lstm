@@ -30,32 +30,11 @@ logs_path = 'log/rnn_words'
 writer = tf.summary.FileWriter(logs_path)
 embedding_size=100
 
-training_path = '/home/d/parseword1'
+training_path = '../parseword'
 maxlength=1000
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 
-
-
-model=word2vec.load('/home/d/combine100.bin')
-with open(training_path) as f:
-    resp = f.readlines()
-
-#len:2071700
-print('init:1')
-def lemma(verb):
-    url = 'http://127.0.0.1:9000'
-    params = {'properties' : r"{'annotators': 'lemma', 'outputFormat': 'json'}"}
-    resp = requests.post(url, verb, params=params).text
-    content=json.loads(resp)
-    return content['sentences'][0]['tokens'][0]['lemma']
-
-def list_tags():
-    realength=0
-    tagdict={')':0}
-    inputs=[]
-    pads=[]
-    answer=[]
-    mm=[0]*6
+def list_tags(resp,mm):
     for sentence in resp:#一个sentence是一句话
         total=0
         for tag in sentence.split():
@@ -64,49 +43,58 @@ def list_tags():
                     total+=1
         if total!=1:
             continue
-
-        outword=[]
-        temp=''
         for tag in sentence.split():
             if tag[0]=='(':
-                if tag=='(MD':
-                    mdflag=1
-                else:
-                    mdflag=0
-                    if tag[1:] in verbtags:
-                        
-                        mm[verbtags.index(tag[1:])]+=1
-                        tag='(VB'
-                        vbflag=1
-                    else:
-                        vbflag=0
-                    if tag not in tagdict:
-                        tagdict[tag]=len(tagdict)
-                    tagword=[0]*embedding_size
-                    tagword[tagdict[tag]]=1
-                    outword.append(tagword)
-            else:
-                if mdflag==0:
-                    node=re.match('([^\)]+)(\)*)',tag.strip())
-                    if node:
-                        temp+=node.group(1)
-                        temp+=' '
-                        if node.group(1) in model:
-                            if vbflag==1:
-                                node2=lemma(node.group(1))
-                                temp=temp+'['+node2+']'
-                                if node2 in model:
-                                    outword.append(model[node2].tolist())
-                                else:
-                                    outword.append([0]*embedding_size)
-                            else:
-                                outword.append(model[node.group(1)].tolist())
-                        else:
-                            outword.append([0]*embedding_size)
-                        tagword=[0]*embedding_size
-                        tagword[0]=1
-                        for _ in range(len(node.group(2))-1):
-                            outword.append(tagword)
+                if tag[1:] in verbtags:
+                    mm[verbtags.index(tag[1:])]+=1
     print(mm)
     return
-list_tags()
+def output(resp,mi,mm):
+    for sentence in resp:
+        total=0
+        for tag in sentence.split():
+            if tag[0]=='(':
+                if tag[1:] in verbtags:
+                    total+=1
+        if total!=1:
+            continue
+        for tag in sentence.split():
+            if tag[0]=='(':
+                if tag[1:] in verbtags:
+                    mm[verbtags.index(tag[1:])]+=1
+                    if mm[verbtags.index(tag[1:])]<=mi:
+                        with open('../resp','a+') as g:
+                            g.write(sentence)
+    print(mm)
+    return
+
+
+model=word2vec.load('../combine100.bin')
+mm=[0]*6
+with open(training_path+'11') as f:
+    resp = f.readlines()
+    list_tags(resp,mm)
+with open(training_path+'22') as f:
+    resp = f.readlines()
+    list_tags(resp,mm)
+with open(training_path+'33') as f:
+    resp = f.readlines()
+    list_tags(resp,mm)
+with open(training_path+'44') as f:
+    resp = f.readlines()
+    list_tags(resp,mm)
+mi=min(mm)
+mm=[0]*6
+with open(training_path+'11') as f:
+    resp = f.readlines()
+    output(resp,mi,mm)
+with open(training_path+'22') as f:
+    resp = f.readlines()
+    output(resp,mi,mm)
+with open(training_path+'33') as f:
+    resp = f.readlines()
+    output(resp,mi,mm)
+with open(training_path+'44') as f:
+    resp = f.readlines()
+    output(resp,mi,mm)
+
