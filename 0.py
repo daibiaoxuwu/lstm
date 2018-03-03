@@ -22,7 +22,7 @@ logs_path = 'log/0'
 writer = tf.summary.FileWriter(logs_path)
 
 # Text file containing words for training
-training_file = 'one.txt'
+training_file = 'train/one.txt'
 
 def read_data(fname):
     with open(fname) as f:
@@ -54,8 +54,8 @@ print('voacb_size:',vocab_size)
 # Parameters
 learning_rate = 0.0005
 training_iters = 5000000
-display_step = 50
-n_input = 5
+display_step = 1
+n_input = 1
 
 # number of units in RNN cell
 n_hidden = 512
@@ -134,14 +134,18 @@ with tf.Session() as session:
         #symbols_out_onehot[dictionary[str(training_data[offset+n_input])]] = 1.0
         #add penalties for frequent words
         symbols_out_onehot[dictionary[str(training_data[offset+n_input])]] = math.log(1.0+ctr[str(training_data[offset+n_input])])
+        #symbols_out_onehot[dictionary[str(training_data[offset+n_input])]] =ctr[str(training_data[offset+n_input])]
         symbols_out_onehot = np.reshape(symbols_out_onehot,[1,-1]).tolist()
-#        print(symbols_in_keys.shape,symbols_out_onehot.shape)
+       # print(symbols_in_keys,symbols_out_onehot)
 
         _, acc, loss, onehot_pred = session.run([optimizer, accuracy, cost, pred], \
                                                 feed_dict={x: symbols_in_keys, y: symbols_out_onehot})
         loss_total += loss
         acc_total += acc
         if (step+1) % display_step == 0:
+            if (step+1)%10000==0:
+                learning_rate*=0.7
+                
             print("Iter= " + str(step+1) + ", Average Loss= " + \
                   "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
                   "{:.2f}%".format(100*acc_total/display_step))

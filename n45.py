@@ -13,7 +13,9 @@ import os
 import json
 import re
 import requests
+import pickle
 
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 print('init:0')
 start_time = time.time()
 def elapsed(sec):
@@ -31,9 +33,9 @@ writer = tf.summary.FileWriter(logs_path)
 embedding_size=100
 patchlength=3
 
-model=word2vec.load('D:\djl\combine100.bin')
+model=word2vec.load('train/combine100.bin')
 # Text file containing words for training
-training_path = 'D:\djl\parseword11'
+training_path = r'train/resp'
 maxlength=700
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 
@@ -44,12 +46,18 @@ with open(training_path) as f:
 
 #len:2071700
 print('init:1')
+'''
 def lemma(verb):
     url = 'http://127.0.0.1:9000'
     params = {'properties' : r"{'annotators': 'lemma', 'outputFormat': 'json'}"}
     resp = requests.post(url, verb, params=params).text
     content=json.loads(resp)
     return content['sentences'][0]['tokens'][0]['lemma']
+'''
+with open('train/lemma', 'rb') as f:
+    ldict = pickle.load(f)
+def lemma(verb):
+    return ldict[verb]
 
 def list_tags(st,step):
     realength=0
@@ -157,8 +165,8 @@ print('init:2')
 # Parameters
 learning_rate = 0.001
 training_iters = 10000
-training_steps=1
-display_step = 100
+training_steps=10
+display_step = 30
 
 # number of units in RNN cell
 n_hidden = 512
@@ -219,7 +227,9 @@ init = tf.global_variables_initializer()
 print('ready')
 
 # Launch the graph
-with tf.Session() as session:
+config=tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction=0.5
+with tf.Session(config=config) as session:
     session.run(init)
     step = 0
     acc_total = 0
@@ -242,7 +252,8 @@ with tf.Session() as session:
         if (step+1) % display_step == 0:
             print("Iter= " + str(step+1) + ", used: "+str(count)+ ", Average Loss= " + \
                   "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
-                  "{:.2f}%".format(100*acc_total/display_step))
+                  "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
+            start_time=time.time()
             acc_total = 0
             loss_total = 0
         step += 1
