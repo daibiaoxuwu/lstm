@@ -18,15 +18,15 @@ def elapsed(sec):
 
 
 # Target log path
-logs_path = 'log/rnn_words'
+logs_path = 'log/0'
 writer = tf.summary.FileWriter(logs_path)
 
 # Text file containing words for training
-training_file = '../one.txt'
+training_file = 'one.txt'
 
 def read_data(fname):
     with open(fname) as f:
-        content = f.readlines()
+        content = f.readlines()[:10]
     content = [x.strip() for x in content]
     content = [content[i].split() for i in range(len(content))]
     content = np.array(content)
@@ -52,9 +52,9 @@ vocab_size = len(dictionary)
 print('voacb_size:',vocab_size)
 
 # Parameters
-learning_rate = 0.001
-training_iters = 500000
-display_step = 5000
+learning_rate = 0.0005
+training_iters = 5000000
+display_step = 50
 n_input = 5
 
 # number of units in RNN cell
@@ -147,12 +147,14 @@ with tf.Session() as session:
                   "{:.2f}%".format(100*acc_total/display_step))
             acc_total = 0
             loss_total = 0
+            '''
             symbols_in = [training_data[i] for i in range(offset, offset + n_input)]
             symbols_out = training_data[offset + n_input]
             symbols_out_pred = reverse_dictionary[int(tf.argmax(onehot_pred, 1).eval())]
             print("%s - [%s] vs [%s]" % (symbols_in,symbols_out,symbols_out_pred))
             print("Elapsed time: ", elapsed(time.time() - start_time))
             start_time=time.time()
+            '''
         step += 1
         offset += (n_input+1)
     print("Optimization Finished!")
