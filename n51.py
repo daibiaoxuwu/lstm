@@ -2,6 +2,7 @@
 #n51.py 
 #learning rate decay
 #patchlength 0 readfrom resp
+#add:saving session
 from __future__ import print_function
 
 import numpy as np
@@ -17,7 +18,7 @@ import re
 import requests
 import pickle
 
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 embedding_size=100
 patchlength=0
 
@@ -53,6 +54,9 @@ writer = tf.summary.FileWriter(logs_path)
 model=word2vec.load('train/combine100.bin')
 # Text file containing words for training
 training_path = r'train/resp'
+
+saver=tf.train.Saver(max_to_keep=1)
+max_acc=0
 
 
 
@@ -269,6 +273,9 @@ with tf.Session() as session:
             acc_total = 0
             loss_total = 0
         step += 1
+        if acc>max_acc:
+            max_acc=acc
+            saver.save(session,'ckpt/n51.ckpt',global_step=step)
     print("Optimization Finished!")
     print("Elapsed time: ", elapsed(time.time() - start_time))
     print("Run on command line.")
