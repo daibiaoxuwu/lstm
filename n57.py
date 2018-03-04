@@ -15,7 +15,7 @@ import re
 import requests
 import pickle
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 print('init:0')
 start_time = time.time()
 def elapsed(sec):
@@ -31,7 +31,7 @@ def elapsed(sec):
 logs_path = 'log/rnn_words'
 writer = tf.summary.FileWriter(logs_path)
 embedding_size=100
-patchlength=3
+patchlength=0
 
 model=word2vec.load('train/combine100.bin')
 # Text file containing words for training
@@ -42,7 +42,8 @@ verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 
 
 with open(training_path) as f:
-    resp = f.readlines()[:300]
+    resp = f.readlines()#[:300]
+print(len(resp))
 
 #len:2071700
 print('init:1')
@@ -105,11 +106,6 @@ def list_tags(st,step):
                         for _ in range(len(node.group(2))-1):
                             outword.append(tagword)
 
-
-
-                            
-        
-
         
         for tag in sentence.split():
             if tag[0]=='(':
@@ -168,11 +164,11 @@ print('init:2')
 
 # Parameters
 global_step = tf.Variable(0, trainable=False)
-initial_learning_rate = 0.02
-learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=100,decay_rate=0.9)
+initial_learning_rate = 0.1
+learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=1000,decay_rate=0.9)
 training_iters = 10000
-training_steps=297
-display_step = 10
+training_steps=300
+display_step = 50
 
 # number of units in RNN cell
 n_hidden = 512
@@ -234,7 +230,7 @@ print('ready')
 
 # Launch the graph
 #config=tf.ConfigProto()
-#config.gpu_options.per_process_gpu_memory_fraction=0.5
+#config.gpu_options.per_process_gpu_memory_fraction=0.4
 #with tf.Session(config=config) as session:
 with tf.Session() as session:
     session.run(init)
@@ -246,15 +242,11 @@ with tf.Session() as session:
 
     count=patchlength
     while step < training_iters:
-        #count,inputs,pads,answers=list_tags(count,training_steps)
-
-        count,inputs,pads,answers=list_tags(0,training_steps)
-        '''
+        count,inputs,pads,answers=list_tags(count,training_steps)
+        #count,inputs,pads,answers=list_tags(0,training_steps)
         if count>=len(resp):
             count=patchlength
-            print('epoch:',learning_rate)
             continue
-        '''
         _, acc, loss, onehot_pred = session.run([optimizer, accuracy, cost, pred], \
                                                 feed_dict={x: inputs, y: answers, p:pads})
         loss_total += loss
