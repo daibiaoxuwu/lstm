@@ -26,7 +26,7 @@ maxlength=700
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 
 global_step = tf.Variable(0, trainable=False)
-initial_learning_rate = 0.02
+initial_learning_rate = 0.0001
 learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=100,decay_rate=0.9)
 training_iters = 1000000
 training_steps=300
@@ -277,9 +277,11 @@ with tf.Session() as session:
             acc_total = 0
             loss_total = 0
         step += 1
+        global_step += 1
+    #    print(global_step.eval())
         if acc>max_acc:
             max_acc=acc
-            saver.save(session,'ckpt/n51.ckpt',global_step=step)
+            saver.save(session,'ckpt/n53.ckpt',global_step=global_step)
     print("Optimization Finished!")
     print("Elapsed time: ", elapsed(time.time() - start_time))
     print("Run on command line.")
