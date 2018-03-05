@@ -7,7 +7,9 @@ import random
 import collections
 import time
 import math
+import os
 
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 def elapsed(sec):
     if sec<60:
         return str(sec) + " sec"
@@ -54,8 +56,8 @@ print('voacb_size:',vocab_size)
 # Parameters
 learning_rate = 0.0005
 training_iters = 5000000
-display_step = 1
-n_input = 1
+display_step = 500
+n_input = 5
 
 # number of units in RNN cell
 n_hidden = 512
@@ -136,7 +138,7 @@ with tf.Session() as session:
         symbols_out_onehot[dictionary[str(training_data[offset+n_input])]] = math.log(1.0+ctr[str(training_data[offset+n_input])])
         #symbols_out_onehot[dictionary[str(training_data[offset+n_input])]] =ctr[str(training_data[offset+n_input])]
         symbols_out_onehot = np.reshape(symbols_out_onehot,[1,-1]).tolist()
-       # print(symbols_in_keys,symbols_out_onehot)
+        #print(symbols_in_keys,symbols_out_onehot)
 
         _, acc, loss, onehot_pred = session.run([optimizer, accuracy, cost, pred], \
                                                 feed_dict={x: symbols_in_keys, y: symbols_out_onehot})

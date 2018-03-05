@@ -3,6 +3,7 @@
 #learning rate decay
 #patchlength 0 readfrom resp
 #add:saving session
+#add:6分类变为2分类 patchlength=3
 from __future__ import print_function
 
 import numpy as np
@@ -20,7 +21,7 @@ import pickle
 
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 embedding_size=100
-patchlength=0
+patchlength=3
 
 maxlength=700
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
@@ -53,7 +54,7 @@ writer = tf.summary.FileWriter(logs_path)
 
 model=word2vec.load('train/combine100.bin')
 # Text file containing words for training
-training_path = r'train/resp'
+training_path = r'train/parseword11'#change:verbtags
 
 saver=tf.train.Saver(max_to_keep=1)
 max_acc=0
@@ -61,7 +62,7 @@ max_acc=0
 
 
 with open(training_path) as f:
-    resp=f.readlines()
+    resp = f.readlines()#[:300]
 print(len(resp))
 
 #len:2071700
@@ -133,7 +134,10 @@ def list_tags(st,step):
                 else:
                     mdflag=0
                     if tag[1:] in verbtags:
-                        answer.append(verbtags.index(tag[1:]))
+                        if tag=='(VBD':#change:verbtags
+                            answer.append(1)
+                        else:
+                            answer.append(0)
                         tag='(VB'
                         vbflag=1
                     else:
@@ -171,9 +175,9 @@ def list_tags(st,step):
         outword=np.pad(outword,((0,maxlength-outword.shape[0]),(0,0)),'constant')
         inputs.append(outword)
     inputs=np.array(inputs)
-    answers=np.zeros((len(answer),len(verbtags)))
+    answers=np.zeros((len(answer),2))
     for num in range(len(answer)):
-        answers[num][answer[num]]=1
+        answers[num][answer[num]]=1#change:verbtags
     #print(fft)
     return count,inputs,pads,answers
 print('init:2')
@@ -182,6 +186,7 @@ print('init:2')
 #vocab_size = len(dictionary)
 
 # Parameters
+verbtags=[0,1]#change:verbtags
 vocab_size=len(verbtags)
 # tf Graph input
 x = tf.placeholder("float", [training_steps, maxlength, embedding_size])
@@ -238,10 +243,10 @@ init = tf.global_variables_initializer()
 print('ready')
 
 # Launch the graph
-config=tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction=0.4
-with tf.Session(config=config) as session:
-#with tf.Session() as session:
+#config=tf.ConfigProto()
+#config.gpu_options.per_process_gpu_memory_fraction=0.4
+#with tf.Session(config=config) as session:
+with tf.Session() as session:
     session.run(init)
     step = 0
     acc_total = 0
