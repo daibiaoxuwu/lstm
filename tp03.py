@@ -21,7 +21,7 @@ def list_tags(resp,mm):
         en=1
         while en<len(resp):
             if(resp[en].strip()=='(ROOT'):
-                g.write(' '.join(resp[st:en]).replace('\n',' '))
+                g.write(' '.join(resp[st:en]).replace('\n',' ')+'\n')
                 st=en
             en+=1
 

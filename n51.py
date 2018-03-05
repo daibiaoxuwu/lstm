@@ -30,7 +30,7 @@ initial_learning_rate = 0.02
 learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=1000,decay_rate=0.9)
 training_iters = 1000000
 training_steps=300
-display_step = 50
+display_step = 20
 
 # number of units in RNN cell
 n_hidden = 512
@@ -238,10 +238,10 @@ init = tf.global_variables_initializer()
 print('ready')
 
 # Launch the graph
-config=tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction=0.4
-with tf.Session(config=config) as session:
-#with tf.Session() as session:
+#config=tf.ConfigProto()
+#config.gpu_options.per_process_gpu_memory_fraction=0.4
+#with tf.Session(config=config) as session:
+with tf.Session() as session:
     session.run(init)
     step = 0
     acc_total = 0
