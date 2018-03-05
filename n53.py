@@ -18,9 +18,9 @@ import re
 import requests
 import pickle
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 embedding_size=100
-patchlength=0
+patchlength=3
 
 maxlength=700
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
@@ -76,7 +76,6 @@ def lemma(verb):
 '''
 with open('train/lemma', 'rb') as f:
     ldict = pickle.load(f)
-
 def lemma(verb):
     if verb in ldict:
         return ldict[verb]
@@ -169,7 +168,7 @@ def list_tags(st,step):
                             outword.append(tagword)
         outword=np.array(outword)
         if outword.shape[0]>maxlength:
-            print('pass')
+            #print('pass')
             answer=answer[:-1]
             continue
         pads.append(outword.shape[0])
