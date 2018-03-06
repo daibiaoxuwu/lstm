@@ -22,14 +22,14 @@ os.environ["CUDA_VISIBLE_DEVICES"]="0"
 embedding_size=100
 patchlength=0
 
-maxlength=700
+maxlength=200
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 
 global_step = tf.Variable(0, trainable=False)
-initial_learning_rate = 0.0001
-learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=100,decay_rate=0.9)
+initial_learning_rate = 0.001
+learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=500,decay_rate=0.8)
 training_iters = 1000000
-training_steps=150
+training_steps=50
 display_step = 20
 
 # number of units in RNN cell
@@ -220,13 +220,30 @@ def RNN(x, p, weights, biases):
 
     # generate prediction
     outputs, states = tf.nn.dynamic_rnn(rnn_cell, x, p, dtype=tf.float32)
+    outputs = tf.stack(outputs)
+ #   outputs = tf.transpose(outputs, [1, 0, 2])
+
+    # Hack to build the indexing and retrieve the right output.
+    #batch_size = tf.shape(outputs)[0]
+    # Start indices for each sample
+    #index = tf.range(0, batch_size) * seq_max_len + (seqlen - 1)
+    index = tf.range(0, tf.shape(outputs)[0],dtype=tf.int32) * maxlength
+    print(index.shape)
+    index=tf.add(index , tf.cast((p - 1),tf.int32))
+    print(index.shape)
+    # Indexing
+    print(outputs.shape)
+    outputs = tf.gather(tf.reshape(outputs, [-1, 256]), index)
+    print(outputs.shape)
+#    pr=tf.Print(outputs[0][-1],[outputs[0][-1]])
+
 #input: [10 1000 100]
 #output: [10 1000 512]
-    outputs=tf.transpose(outputs,[1,0,2])
+#    outputs=tf.transpose(outputs,[1,0,2])
 
     # there are n_input outputs but
     # we only want the last output
-    return tf.matmul(outputs[-1], weights['out']) + biases['out']
+    return tf.matmul(outputs, weights['out']) + biases['out']
 
 pred = RNN(x, p, weights, biases)
 
@@ -261,7 +278,7 @@ with tf.Session(config=config) as session:
         if count>=len(resp):
             count=patchlength
             continue
-        _, acc, loss, onehot_pred = session.run([optimizer, accuracy, cost, pred], \
+        _, acc, loss, onehot_pred= session.run([optimizer, accuracy, cost, pred], \
                                                 feed_dict={x: inputs, y: answers, p:pads})
         loss_total += loss
         acc_total += acc

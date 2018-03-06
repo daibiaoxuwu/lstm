@@ -18,19 +18,20 @@ import re
 import requests
 import pickle
 
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 embedding_size=100
-patchlength=3
+patchlength=0
 
-maxlength=700
+maxlength=200
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 
 global_step = tf.Variable(0, trainable=False)
-initial_learning_rate = 0.001
-learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=500,decay_rate=0.8)
+#initial_learning_rate = 0.02
+learning_rate = 0.001
+#learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=500,decay_rate=0.8)
 training_iters = 1000000
 training_steps=50
-display_step = 20
+display_step = 1
 
 # number of units in RNN cell
 n_hidden = 512
@@ -61,7 +62,7 @@ max_acc=0
 
 
 with open(training_path) as f:
-    resp=f.readlines()
+    resp=f.readlines()[:500]
 print(len(resp))
 
 #len:2071700
@@ -76,6 +77,7 @@ def lemma(verb):
 '''
 with open('train/lemma', 'rb') as f:
     ldict = pickle.load(f)
+
 def lemma(verb):
     if verb in ldict:
         return ldict[verb]
@@ -168,7 +170,7 @@ def list_tags(st,step):
                             outword.append(tagword)
         outword=np.array(outword)
         if outword.shape[0]>maxlength:
-            #print('pass')
+            print('pass')
             answer=answer[:-1]
             continue
         pads.append(outword.shape[0])
@@ -259,10 +261,10 @@ init = tf.global_variables_initializer()
 print('ready')
 
 # Launch the graph
-#config=tf.ConfigProto()
-#config.gpu_options.per_process_gpu_memory_fraction=0.4
-#with tf.Session(config=config) as session:
-with tf.Session() as session:
+config=tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction=0.4
+with tf.Session(config=config) as session:
+#with tf.Session() as session:
     session.run(init)
     step = 0
     acc_total = 0
@@ -298,7 +300,7 @@ with tf.Session() as session:
     #    print(global_step.eval())
         if acc>max_acc:
             max_acc=acc
-            saver.save(session,'ckpt/n53.ckpt',global_step=global_step)
+            saver.save(session,'ckpt/n51.ckpt',global_step=global_step)
     print("Optimization Finished!")
     print("Elapsed time: ", elapsed(time.time() - start_time))
     print("Run on command line.")
