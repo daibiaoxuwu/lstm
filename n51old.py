@@ -1,24 +1,21 @@
 #encoding:utf-8
-#n51test.py
+#n51.py 
 #learning rate decay
 #patchlength 0 readfrom resp
 #add:saving session
 from __future__ import print_function
 
-print('init:0')
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib import rnn
-print('init:1')
-#import random
-#import collections
+import random
+import collections
 import time
 import word2vec
-print('init:2')
 import os
-#import json
+import json
 import re
-#import requests
+import requests
 import pickle
 
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -29,9 +26,10 @@ maxlength=200
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 
 global_step = tf.Variable(0, trainable=False)
-initial_learning_rate = 0.001
-learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=500,decay_rate=0.8)
-training_iters = 1
+#initial_learning_rate = 0.02
+learning_rate = 0.001
+#learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=500,decay_rate=0.8)
+training_iters = 1000000
 training_steps=50
 display_step = 1
 
@@ -39,6 +37,7 @@ display_step = 1
 n_hidden = 512
 
 
+print('init:0')
 start_time = time.time()
 def elapsed(sec):
     if sec<60:
@@ -51,10 +50,9 @@ def elapsed(sec):
 
 # Target log path
 logs_path = 'log/rnn_words'
+writer = tf.summary.FileWriter(logs_path)
 
-print('loading model')
 model=word2vec.load('train/combine100.bin')
-print('loaded model')
 # Text file containing words for training
 training_path = r'train/resp'
 
@@ -63,13 +61,12 @@ max_acc=0
 
 
 
-print('reading text')
 with open(training_path) as f:
-    resp=f.readlines()
-print('read data:',len(resp))
-print('loading lemma')
+    resp=f.readlines()[:500]
+print(len(resp))
 
 #len:2071700
+print('init:1')
 '''
 def lemma(verb):
     url = 'http://127.0.0.1:9000'
@@ -80,7 +77,6 @@ def lemma(verb):
 '''
 with open('train/lemma', 'rb') as f:
     ldict = pickle.load(f)
-print('loaded lemma')
 
 def lemma(verb):
     if verb in ldict:
@@ -186,6 +182,7 @@ def list_tags(st,step):
         answers[num][answer[num]]=1
     #print(fft)
     return count,inputs,pads,answers
+print('init:2')
 
 #dictionary, reverse_dictionary = build_dataset(training_data)
 #vocab_size = len(dictionary)
@@ -253,7 +250,7 @@ pred = RNN(x, p, weights, biases)
 
 # Loss and optimizer
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
-#optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate).minimize(cost)
+optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # Model evaluation
 correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
@@ -266,21 +263,14 @@ print('ready')
 # Launch the graph
 config=tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction=0.4
-
-print('start session')
 with tf.Session(config=config) as session:
 #with tf.Session() as session:
-    print(tf.train.latest_checkpoint('/home/djl/lstm/ckpt/'))
-    #tf.train.Saver.restore(session, tf.train.latest_checkpoint('/home/djl/lstm/ckpt/'))
-#    saver.restore(sess=session, save_path='/home/djl/lstm/ckpt/n51.ckpt')
-    session.run(tf.initialize_all_variables())  
-    #saver.restore(session,tf.train.latest_checkpoint('/home/djl/lstm/ckpt/'))
-    saver.restore(session,'/home/djl/lstm/ckpt/n51.ckpt-4738')
-    print('session init')
+    session.run(init)
     step = 0
     acc_total = 0
     loss_total = 0
 
+    writer.add_graph(session.graph)
 
     count=patchlength
     while step < training_iters:
@@ -288,9 +278,8 @@ with tf.Session(config=config) as session:
         #count,inputs,pads,answers=list_tags(0,training_steps)
         if count>=len(resp):
             count=patchlength
-            print('epoch')
             continue
-        acc, loss, onehot_pred= session.run([accuracy, cost, pred], \
+        _, acc, loss, onehot_pred= session.run([optimizer, accuracy, cost, pred], \
                                                 feed_dict={x: inputs, y: answers, p:pads})
         loss_total += loss
         acc_total += acc
@@ -309,6 +298,9 @@ with tf.Session(config=config) as session:
         step += 1
         global_step += 1
     #    print(global_step.eval())
+        if acc>max_acc:
+            max_acc=acc
+            saver.save(session,'ckpt/n51.ckpt',global_step=global_step)
     print("Optimization Finished!")
     print("Elapsed time: ", elapsed(time.time() - start_time))
     print("Run on command line.")

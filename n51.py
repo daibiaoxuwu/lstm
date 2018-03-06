@@ -297,9 +297,8 @@ with tf.Session(config=config) as session:
         step += 1
         global_step += 1
     #    print(global_step.eval())
-        if acc>max_acc:
-            max_acc=acc
-            saver.save(session,'ckpt/n51.ckpt',global_step=global_step)
+        if step % 2000 ==0:
+            saver.save(session,'ckpt/n5101.ckpt',global_step=global_step)
     print("Optimization Finished!")
     print("Elapsed time: ", elapsed(time.time() - start_time))
     print("Run on command line.")

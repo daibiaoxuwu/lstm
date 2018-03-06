@@ -1,6 +1,6 @@
 log/*
 train/*
-ckpt/*
+ckpt*/*
 *.swp
 
 
