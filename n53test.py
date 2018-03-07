@@ -23,9 +23,9 @@ import pickle
 
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 embedding_size=100
-patchlength=0
+patchlength=3
 
-maxlength=200
+maxlength=700
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 
 global_step = tf.Variable(0, trainable=False)
@@ -78,7 +78,7 @@ def lemma(verb):
     content=json.loads(resp)
     return content['sentences'][0]['tokens'][0]['lemma']
 '''
-with open('train/lemma', 'rb') as f:
+with open('train/lemma2', 'rb') as f:
     ldict = pickle.load(f)
 print('loaded lemma')
 
@@ -275,7 +275,7 @@ with tf.Session(config=config) as session:
 #    saver.restore(sess=session, save_path='/home/djl/lstm/ckpt/n51.ckpt')
     session.run(tf.initialize_all_variables())  
 #    saver.restore(session,tf.train.latest_checkpoint('/home/djl/lstm/ckpt/n5101.ckpt'))
-    saver.restore(session,'/home/djl/lstm/ckpt/n5101.ckpt-24000')
+    saver.restore(session,'/home/djl/lstm/ckpt/n5302.ckpt-4000')
     print('session init')
     step = 0
     acc_total = 0

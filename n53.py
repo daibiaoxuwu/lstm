@@ -55,7 +55,6 @@ model=word2vec.load('train/combine100.bin')
 # Text file containing words for training
 training_path = r'train/resp'
 
-saver=tf.train.Saver(max_to_keep=1)
 max_acc=0
 
 
@@ -76,6 +75,7 @@ def lemma(verb):
 '''
 with open('train/lemma', 'rb') as f:
     ldict = pickle.load(f)
+
 def lemma(verb):
     if verb in ldict:
         return ldict[verb]
@@ -98,19 +98,19 @@ def list_tags(st,step):
         count+=1
         total=0
         
+        '''
         for tag in sentence.split():
             if tag[0]=='(':
                 if tag[1:] in verbtags:
                     total+=1
         if total!=1:
             continue
+        '''
         #else:
             #fft+=1
         
         for oldsentence in resp[count-patchlength:count]:
-            
-        
-            for tag in sentence.split():
+            for tag in oldsentence.split():
                 if tag[0]=='(':
                     if tag not in tagdict:
                         tagdict[tag]=len(tagdict)
@@ -193,12 +193,9 @@ y = tf.placeholder("float", [training_steps, len(verbtags)])
 p = tf.placeholder("float", [training_steps])
 
 # RNN output node weights and biases
-weights = {
-    'out': tf.Variable(tf.random_normal([256, vocab_size]))
-}
-biases = {
-    'out': tf.Variable(tf.random_normal([vocab_size]))
-}
+weights = tf.Variable(tf.random_normal([256, vocab_size])) 
+biases =  tf.Variable(tf.random_normal([vocab_size])) 
+saver=tf.train.Saver([weights,biases],max_to_keep=1)
 
 def RNN(x, p, weights, biases):
     #x = tf.reshape(x, [-1, maxlength])
@@ -242,7 +239,7 @@ def RNN(x, p, weights, biases):
 
     # there are n_input outputs but
     # we only want the last output
-    return tf.matmul(outputs, weights['out']) + biases['out']
+    return tf.matmul(outputs, weights) + biases
 
 pred = RNN(x, p, weights, biases)
 
@@ -297,7 +294,7 @@ with tf.Session() as session:
         global_step += 1
     #    print(global_step.eval())
         if step % 2000 ==0:
-            saver.save(session,'ckpt/n5301.ckpt',global_step=global_step)
+            saver.save(session,'ckpt/n5302.ckpt',global_step=global_step)
     print("Optimization Finished!")
     print("Elapsed time: ", elapsed(time.time() - start_time))
     print("Run on command line.")
