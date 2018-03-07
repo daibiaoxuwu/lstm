@@ -108,9 +108,7 @@ def list_tags(st,step):
             #fft+=1
         
         for oldsentence in resp[count-patchlength:count]:
-            
-        
-            for tag in sentence.split():
+            for tag in oldsentence.split():
                 if tag[0]=='(':
                     if tag not in tagdict:
                         tagdict[tag]=len(tagdict)
