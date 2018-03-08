@@ -18,11 +18,14 @@ import re
 import requests
 import pickle
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
-embedding_size=100
-patchlength=0
-
-maxlength=200
+os.environ["CUDA_VISIBLE_DEVICES"]="0"#环境变量：使用第一块gpu
+embedding_size=100#词向量维度数量
+patchlength=0#神经网络的输入是一句只有一个动词的句子（以及其语法树），把动词变为原型，语法树的tag变为了VB。
+#并预测它的动词时态。如果它不为0，输入变为这句话以及他前面的patchlength句话。
+#语法树结构：（VB love）会被变为三个标签：（VB的（100维）one-hot标签，love的词向量标签，反括号对应的全0标签。
+#每个反括号对应一个单独的标签，而正括号没有。
+#one-hot的意思就是，假如有
+maxlength=200#输入序列（包括语法树信息）的
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 
 global_step = tf.Variable(0, trainable=False)
