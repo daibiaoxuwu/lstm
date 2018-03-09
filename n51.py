@@ -31,9 +31,9 @@ verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 global_step = tf.Variable(0, trainable=False)
 initial_learning_rate = 0.001
 learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=500,decay_rate=0.8)
-training_iters = 1000000
-training_steps=50
-display_step = 20
+training_iters = 2000
+training_steps=1
+display_step = 1
 
 # number of units in RNN cell
 n_hidden = 512
@@ -63,7 +63,7 @@ max_acc=0
 
 
 with open(training_path) as f:
-    resp=f.readlines()
+    resp=f.readlines()[:100]
 print(len(resp))
 
 #len:2071700
@@ -196,7 +196,7 @@ p = tf.placeholder("float", [training_steps])
 # RNN output node weights and biases
 weights = tf.Variable(tf.random_normal([256, vocab_size])) 
 biases =  tf.Variable(tf.random_normal([vocab_size])) 
-saver=tf.train.Saver([weights,biases],max_to_keep=1)
+saver=tf.train.Saver()
 
 def RNN(x, p, weights, biases):
     #x = tf.reshape(x, [-1, maxlength])
@@ -294,8 +294,8 @@ with tf.Session(config=config) as session:
         step += 1
         global_step += 1
     #    print(global_step.eval())
-        if step % 2000 ==0:
-            saver.save(session,'ckpt/n5102.ckpt',global_step=global_step)
+        if step % 200 ==0:
+            saver.save(session,'/home/d/ckpt/n5103.ckpt',global_step=global_step)
     print("Optimization Finished!")
     print("Elapsed time: ", elapsed(time.time() - start_time))
     print("Run on command line.")

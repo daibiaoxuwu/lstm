@@ -58,7 +58,7 @@ print('loaded model')
 # Text file containing words for training
 training_path = r'train/resp'
 
-saver=tf.train.Saver(max_to_keep=1)
+saver=tf.train.Saver()
 max_acc=0
 
 
@@ -198,12 +198,8 @@ y = tf.placeholder("float", [training_steps, len(verbtags)])
 p = tf.placeholder("float", [training_steps])
 
 # RNN output node weights and biases
-weights = {
-    'out': tf.Variable(tf.random_normal([256, vocab_size]))
-}
-biases = {
-    'out': tf.Variable(tf.random_normal([vocab_size]))
-}
+weights = tf.Variable(tf.random_normal([256, vocab_size]))
+biases = tf.Variable(tf.random_normal([vocab_size]))
 
 def RNN(x, p, weights, biases):
     #x = tf.reshape(x, [-1, maxlength])
@@ -247,7 +243,7 @@ def RNN(x, p, weights, biases):
 
     # there are n_input outputs but
     # we only want the last output
-    return tf.matmul(outputs, weights['out']) + biases['out']
+    return tf.matmul(outputs, weights) + biases
 
 pred = RNN(x, p, weights, biases)
 
@@ -264,18 +260,14 @@ init = tf.global_variables_initializer()
 print('ready')
 
 # Launch the graph
+print('start session')
 config=tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction=0.4
-
-print('start session')
 with tf.Session(config=config) as session:
 #with tf.Session() as session:
-    print(tf.train.latest_checkpoint('/home/djl/lstm/ckpt/'))
-    #tf.train.Saver.restore(session, tf.train.latest_checkpoint('/home/djl/lstm/ckpt/'))
-#    saver.restore(sess=session, save_path='/home/djl/lstm/ckpt/n51.ckpt')
-    session.run(tf.initialize_all_variables())  
-#    saver.restore(session,tf.train.latest_checkpoint('/home/djl/lstm/ckpt/n5101.ckpt'))
-    saver.restore(session,'/home/djl/lstm/ckpt/n5101.ckpt-24000')
+    session.run(tf.global_variables_initializer())
+    ckpt = tf.train.get_checkpoint_state('/home/d/ckpt')  
+    saver.restore(session, ckpt.model_checkpoint_path)  
     print('session init')
     step = 0
     acc_total = 0
