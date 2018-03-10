@@ -1,2 +1,0 @@
-(ROOT (S (NP (DT The) (NNP Workflow) (NNP Satisfiability) (NNP Problem)) (VP (VBZ is) (NP (NP (DT a) (NN problem)) (PP (IN of) (NP (NP (JJ practical) (NN interest)) (SBAR (WHNP (WDT that)) (S (VP (VBZ arises) (SBAR (WHADVP (WRB whenever)) (S (NP (NNS tasks)) (VP (VBP need) (S (VP (TO to) (VP (VB be) (VP (VBN performed) (PP (IN by) (NP (NP (VBN authorized) (NNS users)) (, ,) (ADJP (JJ subject) (PP (TO to) (NP (NP (NNS constraints)) (VP (VBN defined) (PP (IN by) (NP (NN business) (NNS rules))))))))))))))))))))))) (. .)))
-

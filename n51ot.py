@@ -267,7 +267,7 @@ config.gpu_options.per_process_gpu_memory_fraction=0.4
 with tf.Session(config=config) as session:
 #with tf.Session() as session:
     session.run(tf.global_variables_initializer())
-    ckpt = tf.train.get_checkpoint_state('/home/djl/ckpt2/')
+    ckpt = tf.train.get_checkpoint_state('/home/djl/ckpt3/')
     print(ckpt)
     saver.restore(session, ckpt.model_checkpoint_path)  
     print('session init')
