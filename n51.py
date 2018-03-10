@@ -218,7 +218,6 @@ def RNN(x, p, weights, biases):
 
     # generate prediction
     initial_state = rnn_cell.zero_state(training_steps, dtype=tf.float32)
-
     outputs, states = tf.nn.dynamic_rnn(rnn_cell, x, sequence_length=p, initial_state=initial_state, dtype=tf.float32)
     outputs = tf.stack(outputs)
  #   outputs = tf.transpose(outputs, [1, 0, 2])
@@ -307,6 +306,7 @@ with tf.Session(config=config) as session:
         if step % 200 ==0:
             print(saver.save(session,'/home/djl/ckpt2/n5103.ckpt',global_step=global_step))
             print(session.run(weights))
+            print(session.run(biases))
     print("Optimization Finished!")
     print("Elapsed time: ", elapsed(time.time() - start_time))
     print("Run on command line.")
