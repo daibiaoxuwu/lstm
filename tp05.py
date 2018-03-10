@@ -14,10 +14,10 @@ optimizer = tf.train.GradientDescentOptimizer(0.5)
 train = optimizer.minimize(loss)  
   
 isTrain = True
-isTrain = False
+#isTrain = False
 train_steps = 100  
 checkpoint_steps = 50  
-checkpoint_dir = '/home/d/workspace/language/learn/tmp/'  
+checkpoint_dir = '/home/djl/tmp/'  
   
 saver = tf.train.Saver()  # defaults to saving all variables - in this case w and b  
 x_data = np.reshape(np.random.rand(10).astype(np.float32), (10, 1))  

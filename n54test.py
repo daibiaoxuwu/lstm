@@ -1,38 +1,38 @@
 #encoding:utf-8
-#n51.py 
+#n51test.py
 #learning rate decay
 #patchlength 0 readfrom resp
 #add:saving session
 from __future__ import print_function
 
+print('init:0')
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib import rnn
-import random
-import collections
+print('init:1')
+#import random
+#import collections
 import time
 import word2vec
+print('init:2')
 import os
-import json
+#import json
 import re
-import requests
+#import requests
 import pickle
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"#环境变量：使用第一块gpu
-embedding_size=100#词向量维度数量
-patchlength=0#神经网络的输入是一句只有一个动词的句子（以及其语法树），把动词变为原型，语法树的tag变为了VB。
-#并预测它的动词时态。如果它不为0，输入变为这句话以及他前面的patchlength句话。
-#语法树结构：（VB love）会被变为三个标签：（VB的（100维）one-hot标签，love的词向量标签，反括号对应的全0标签。
-#每个反括号对应一个单独的标签，而正括号没有。
-#one-hot的意思就是，假如有
-maxlength=200#输入序列（包括语法树信息）的
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
+embedding_size=100
+patchlength=3
+
+maxlength=700
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 
 global_step = tf.Variable(0, trainable=False)
 initial_learning_rate = 0.001
 learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=500,decay_rate=0.8)
-training_iters = 2000
-training_steps=1
+training_iters = 1
+training_steps=50
 display_step = 1
 
 # number of units in RNN cell
@@ -51,7 +51,6 @@ def elapsed(sec):
 
 # Target log path
 logs_path = 'log/rnn_words'
-writer = tf.summary.FileWriter(logs_path)
 
 print('loading model')
 model=word2vec.load('train/combine100.bin')
@@ -59,14 +58,16 @@ print('loaded model')
 # Text file containing words for training
 training_path = r'train/resp'
 
+saver=tf.train.Saver(max_to_keep=1)
 max_acc=0
 
 
 
 print('reading text')
-with open(training_path) as f:
-    resp=f.readlines()[:100]
-print('read data:',len(resp))
+resp=open(training_path)
+resplist=queue.Queue()
+for _ in range(patchlength):
+    resplist.put(resp.readline())
 print('loading lemma')
 
 #len:2071700
@@ -89,17 +90,22 @@ def lemma(verb):
         print('errverb:',verb)
         return verb
 
-def list_tags(st,step):
+def list_tags(step):
     realength=0
     tagdict={')':0}
     inputs=[]
     pads=[]
     answer=[]
-    count=st
     #fft=0
-    for sentence in resp[st:]:#一个sentence是一句话
+    while True:
         if len(answer)==step:
             break
+        sentence=resp.readline()
+        resplist.put(sentence)
+        if sentence==None:
+            print('epoch')
+            f.seek(0, os.SEEK_SET)
+            sentence=resp.readline()
         outword=[]
         count+=1
         total=0
@@ -109,11 +115,12 @@ def list_tags(st,step):
                 if tag[1:] in verbtags:
                     total+=1
         if total!=1:
+            resplist.get()
             continue
         #else:
             #fft+=1
-        
-        for oldsentence in resp[count-patchlength:count]:
+        for _ in range(patchlength): 
+            oldsentence=resplist.get()
             for tag in oldsentence.split():
                 if tag[0]=='(':
                     if tag not in tagdict:
@@ -196,8 +203,12 @@ y = tf.placeholder("float", [training_steps, len(verbtags)])
 p = tf.placeholder("float", [training_steps])
 
 # RNN output node weights and biases
-weights = tf.Variable(tf.random_normal([256, vocab_size])) 
-biases =  tf.Variable(tf.random_normal([vocab_size])) 
+weights = {
+    'out': tf.Variable(tf.random_normal([256, vocab_size]))
+}
+biases = {
+    'out': tf.Variable(tf.random_normal([vocab_size]))
+}
 
 def RNN(x, p, weights, biases):
     #x = tf.reshape(x, [-1, maxlength])
@@ -217,9 +228,7 @@ def RNN(x, p, weights, biases):
     # rnn_cell = rnn.BasicLSTMCell(n_hidden)
 
     # generate prediction
-    initial_state = rnn_cell.zero_state(training_steps, dtype=tf.float32)
-
-    outputs, states = tf.nn.dynamic_rnn(rnn_cell, x, sequence_length=p, initial_state=initial_state, dtype=tf.float32)
+    outputs, states = tf.nn.dynamic_rnn(rnn_cell, x, p, dtype=tf.float32)
     outputs = tf.stack(outputs)
  #   outputs = tf.transpose(outputs, [1, 0, 2])
 
@@ -243,39 +252,40 @@ def RNN(x, p, weights, biases):
 
     # there are n_input outputs but
     # we only want the last output
-    return tf.matmul(outputs, weights) + biases
+    return tf.matmul(outputs, weights['out']) + biases['out']
 
 pred = RNN(x, p, weights, biases)
 
 # Loss and optimizer
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
-optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate).minimize(cost)
+#optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # Model evaluation
 correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
 accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
-saver=tf.train.Saver()
-'''
-tf.add_to_collection('optimizer',optimizer)
-tf.add_to_collection('accuracy',accuracy)
-tf.add_to_collection('cost',cost)
-tf.add_to_collection('pred',pred)
-'''
 # Initializing the variables
+init = tf.global_variables_initializer()
+print('ready')
 
 # Launch the graph
-print('start session')
 config=tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction=0.4
+
+print('start session')
 with tf.Session(config=config) as session:
 #with tf.Session() as session:
-    session.run(tf.global_variables_initializer())
+    print(tf.train.latest_checkpoint('/home/djl/lstm/ckpt/'))
+    #tf.train.Saver.restore(session, tf.train.latest_checkpoint('/home/djl/lstm/ckpt/'))
+#    saver.restore(sess=session, save_path='/home/djl/lstm/ckpt/n51.ckpt')
+    session.run(tf.initialize_all_variables())  
+#    saver.restore(session,tf.train.latest_checkpoint('/home/djl/lstm/ckpt/n5101.ckpt'))
+    saver.restore(session,'/home/djl/lstm/ckpt/n5302.ckpt-4000')
+    print('session init')
     step = 0
     acc_total = 0
     loss_total = 0
 
-    writer.add_graph(session.graph)
 
     count=patchlength
     while step < training_iters:
@@ -285,7 +295,7 @@ with tf.Session(config=config) as session:
             count=patchlength
             print('epoch')
             continue
-        _, acc, loss, onehot_pred= session.run([optimizer, accuracy, cost, pred], \
+        acc, loss, onehot_pred= session.run([accuracy, cost, pred], \
                                                 feed_dict={x: inputs, y: answers, p:pads})
         loss_total += loss
         acc_total += acc
@@ -304,9 +314,6 @@ with tf.Session(config=config) as session:
         step += 1
         global_step += 1
     #    print(global_step.eval())
-        if step % 200 ==0:
-            print(saver.save(session,'/home/djl/ckpt2/n5103.ckpt',global_step=global_step))
-            print(session.run(weights))
     print("Optimization Finished!")
     print("Elapsed time: ", elapsed(time.time() - start_time))
     print("Run on command line.")

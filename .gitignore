@@ -2,5 +2,6 @@ log/*
 train/*
 ckpt*/*
 *.swp
+*.swo
 
 

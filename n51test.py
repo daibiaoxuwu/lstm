@@ -21,18 +21,21 @@ import re
 #import requests
 import pickle
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
-embedding_size=100
-patchlength=0
-
-maxlength=200
+os.environ["CUDA_VISIBLE_DEVICES"]="0"#环境变量：使用第一块gpu
+embedding_size=100#词向量维度数量
+patchlength=0#神经网络的输入是一句只有一个动词的句子（以及其语法树），把动词变为原型，语法树的tag变为了VB。
+#并预测它的动词时态。如果它不为0，输入变为这句话以及他前面的patchlength句话。
+#语法树结构：（VB love）会被变为三个标签：（VB的（100维）one-hot标签，love的词向量标签，反括号对应的全0标签。
+#每个反括号对应一个单独的标签，而正括号没有。
+#one-hot的意思就是，假如有
+maxlength=200#输入序列（包括语法树信息）的
 verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 
 global_step = tf.Variable(0, trainable=False)
 initial_learning_rate = 0.001
 learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=500,decay_rate=0.8)
-training_iters = 1
-training_steps=50
+training_iters = 20
+training_steps=1
 display_step = 1
 
 # number of units in RNN cell
@@ -51,6 +54,7 @@ def elapsed(sec):
 
 # Target log path
 logs_path = 'log/rnn_words'
+writer = tf.summary.FileWriter(logs_path)
 
 print('loading model')
 model=word2vec.load('train/combine100.bin')
@@ -58,14 +62,13 @@ print('loaded model')
 # Text file containing words for training
 training_path = r'train/resp'
 
-saver=tf.train.Saver()
 max_acc=0
 
 
 
 print('reading text')
 with open(training_path) as f:
-    resp=f.readlines()
+    resp=f.readlines()[:100]
 print('read data:',len(resp))
 print('loading lemma')
 
@@ -78,7 +81,7 @@ def lemma(verb):
     content=json.loads(resp)
     return content['sentences'][0]['tokens'][0]['lemma']
 '''
-with open('train/lemma', 'rb') as f:
+with open('train/lemma2', 'rb') as f:
     ldict = pickle.load(f)
 print('loaded lemma')
 
@@ -114,9 +117,7 @@ def list_tags(st,step):
             #fft+=1
         
         for oldsentence in resp[count-patchlength:count]:
-            
-        
-            for tag in sentence.split():
+            for tag in oldsentence.split():
                 if tag[0]=='(':
                     if tag not in tagdict:
                         tagdict[tag]=len(tagdict)
@@ -198,9 +199,11 @@ y = tf.placeholder("float", [training_steps, len(verbtags)])
 p = tf.placeholder("float", [training_steps])
 
 # RNN output node weights and biases
-weights = tf.Variable(tf.random_normal([256, vocab_size]))
-biases = tf.Variable(tf.random_normal([vocab_size]))
+weights = tf.Variable(tf.random_normal([256, vocab_size])) 
+biases =  tf.Variable(tf.random_normal([vocab_size])) 
+saver=tf.train.Saver()
 
+'''
 def RNN(x, p, weights, biases):
     #x = tf.reshape(x, [-1, maxlength])
 
@@ -249,15 +252,14 @@ pred = RNN(x, p, weights, biases)
 
 # Loss and optimizer
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
-#optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate).minimize(cost)
+optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # Model evaluation
 correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
 accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
 # Initializing the variables
-init = tf.global_variables_initializer()
-print('ready')
+'''
 
 # Launch the graph
 print('start session')
@@ -266,13 +268,26 @@ config.gpu_options.per_process_gpu_memory_fraction=0.4
 with tf.Session(config=config) as session:
 #with tf.Session() as session:
     session.run(tf.global_variables_initializer())
-    ckpt = tf.train.get_checkpoint_state('/home/d/ckpt')  
+    ckpt = tf.train.get_checkpoint_state('/home/djl/ckpt/')
+    print(ckpt)
+    saver=tf.train.import_meta_graph(ckpt.model_checkpoint_path+'.meta')
     saver.restore(session, ckpt.model_checkpoint_path)  
+    optimizer = tf.get_collection('optimizer')[0]
+    accuracy = tf.get_collection('accuracy')[0]
+    cost = tf.get_collection('cost')[0]
+    pred = tf.get_collection('pred')[0]
+
+
+
+
+
     print('session init')
+    print(session.run(weights))
     step = 0
     acc_total = 0
     loss_total = 0
 
+    writer.add_graph(session.graph)
 
     count=patchlength
     while step < training_iters:
@@ -282,7 +297,7 @@ with tf.Session(config=config) as session:
             count=patchlength
             print('epoch')
             continue
-        acc, loss, onehot_pred= session.run([accuracy, cost, pred], \
+        _, acc, loss, onehot_pred= session.run([optimizer, accuracy, cost, pred], \
                                                 feed_dict={x: inputs, y: answers, p:pads})
         loss_total += loss
         acc_total += acc

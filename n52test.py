@@ -1,21 +1,24 @@
 #encoding:utf-8
-#n51.py 
+#n51test.py
 #learning rate decay
 #patchlength 0 readfrom resp
 #add:saving session
 from __future__ import print_function
 
+print('init:0')
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib import rnn
-import random
-import collections
+print('init:1')
+#import random
+#import collections
 import time
 import word2vec
+print('init:2')
 import os
-import json
+#import json
 import re
-import requests
+#import requests
 import pickle
 
 os.environ["CUDA_VISIBLE_DEVICES"]="0"#环境变量：使用第一块gpu
@@ -31,7 +34,7 @@ verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 global_step = tf.Variable(0, trainable=False)
 initial_learning_rate = 0.001
 learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=500,decay_rate=0.8)
-training_iters = 2000
+training_iters = 20
 training_steps=1
 display_step = 1
 
@@ -198,6 +201,7 @@ p = tf.placeholder("float", [training_steps])
 # RNN output node weights and biases
 weights = tf.Variable(tf.random_normal([256, vocab_size])) 
 biases =  tf.Variable(tf.random_normal([vocab_size])) 
+saver=tf.train.Saver()
 
 def RNN(x, p, weights, biases):
     #x = tf.reshape(x, [-1, maxlength])
@@ -217,9 +221,7 @@ def RNN(x, p, weights, biases):
     # rnn_cell = rnn.BasicLSTMCell(n_hidden)
 
     # generate prediction
-    initial_state = rnn_cell.zero_state(training_steps, dtype=tf.float32)
-
-    outputs, states = tf.nn.dynamic_rnn(rnn_cell, x, sequence_length=p, initial_state=initial_state, dtype=tf.float32)
+    outputs, states = tf.nn.dynamic_rnn(rnn_cell, x, p, dtype=tf.float32)
     outputs = tf.stack(outputs)
  #   outputs = tf.transpose(outputs, [1, 0, 2])
 
@@ -255,14 +257,8 @@ optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate).minimize(cost
 correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
 accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
-saver=tf.train.Saver()
-'''
-tf.add_to_collection('optimizer',optimizer)
-tf.add_to_collection('accuracy',accuracy)
-tf.add_to_collection('cost',cost)
-tf.add_to_collection('pred',pred)
-'''
 # Initializing the variables
+print('ready')
 
 # Launch the graph
 print('start session')
@@ -271,6 +267,11 @@ config.gpu_options.per_process_gpu_memory_fraction=0.4
 with tf.Session(config=config) as session:
 #with tf.Session() as session:
     session.run(tf.global_variables_initializer())
+    ckpt = tf.train.get_checkpoint_state('/home/djl/ckpt/')
+    print(ckpt)
+    saver.restore(session, ckpt.model_checkpoint_path)  
+    print('session init')
+    print(session.run(weights))
     step = 0
     acc_total = 0
     loss_total = 0
@@ -304,9 +305,6 @@ with tf.Session(config=config) as session:
         step += 1
         global_step += 1
     #    print(global_step.eval())
-        if step % 200 ==0:
-            print(saver.save(session,'/home/djl/ckpt2/n5103.ckpt',global_step=global_step))
-            print(session.run(weights))
     print("Optimization Finished!")
     print("Elapsed time: ", elapsed(time.time() - start_time))
     print("Run on command line.")

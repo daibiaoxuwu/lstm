@@ -6,10 +6,10 @@ w = tf.Variable(tf.random_normal([1], -1, 1))
 b = tf.Variable(tf.zeros([1]))  
   
 isTrain = True
-isTrain = False
+#isTrain = False
 train_steps = 100  
 checkpoint_steps = 50  
-checkpoint_dir = '/home/d/workspace/language/learn/tmp/'  
+checkpoint_dir = '/home/djl/tmp/'  
   
 saver = tf.train.Saver()  # defaults to saving all variables - in this case w and b  
   
