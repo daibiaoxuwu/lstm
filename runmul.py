@@ -8,10 +8,12 @@ import reader
 import rnnmodel
 
 os.environ["CUDA_VISIBLE_DEVICES"]="0"#环境变量：使用第一块gpu
-logs_path = 'log/n51'
-saving_path='/home/djl/ckpt3/n51.ckpt'
+os.environ["CUDA_VISIBLE_DEVICES"]="1"#环境变量：使用第一块gpu
+logs_path = 'log/runmul'
+saving_path='/home/djl/runmul/n.ckpt'
 
 patchlength=0
+patchlength=3
 #神经网络的输入是一句只有一个动词的句子（以及其语法树），把动词变为原型，语法树的tag变为了VB。
 #并预测它的动词时态。如果它不为0，输入变为这句话以及他前面的patchlength句话。
 #语法树结构：（VB love）会被变为三个标签：（VB的（100维）one-hot标签，love的词向量标签，反括号对应的全0标签。
@@ -20,6 +22,7 @@ patchlength=0
 
 embedding_size=100
 maxlength=200
+maxlength=700
 initial_training_rate=0.001
 training_iters = 10000000
 batch_size=50
@@ -53,10 +56,10 @@ model=rnnmodel.rnnmodel(vocab_size=6,\
 saver=tf.train.Saver()
 # Launch the graph
 print('start session')
-config=tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction=0.4
-with tf.Session(config=config) as session:
-#with tf.Session() as session:
+#config=tf.ConfigProto()
+#config.gpu_options.per_process_gpu_memory_fraction=0.4
+#with tf.Session(config=config) as session:
+with tf.Session() as session:
     session.run(tf.global_variables_initializer())
     step = 0
     acc_total = 0

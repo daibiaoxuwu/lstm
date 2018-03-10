@@ -37,7 +37,7 @@ class reader(object):
         print('loaded model')
 
         with open(r'train/resp') as f:
-            self.resp=f.readlines()[:100]
+            self.resp=f.readlines()
         print('loaded data:',len(self.resp))
 
         with open('train/lemma2', 'rb') as f:
@@ -52,13 +52,13 @@ class reader(object):
             return verb
 
     def list_tags(self,st,step):
-        realength=0
-        tagdict={')':0}
-        inputs=[]
-        pads=[]
-        answer=[]
-        count=st
         while True:#防止读到末尾
+            realength=0
+            tagdict={')':0}
+            inputs=[]
+            pads=[]
+            answer=[]
+            count=st
             for sentence in self.resp[st:]:#一个sentence是一句话
                 if len(answer)==step:
                     break
@@ -144,6 +144,7 @@ class reader(object):
                 answers[num][answer[num]]=1
             if count>=len(self.resp):
                 count=self.patchlength
+                st=count
                 print('epoch')
 #continue the 'while True' loop
             else:
