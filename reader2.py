@@ -25,6 +25,7 @@ class reader(object):
         self.embedding_size=embedding_size
         self.verbtags=['VB','VBZ','VBP','VBD','VBN','VBG'] #所有动词的tag
         self.model=word2vec.load('train/combine100.bin')   #加载词向量模型
+        self.tagdict={')':0}
         print('loaded model')
 
 #加载文字
@@ -46,8 +47,6 @@ class reader(object):
 
     def list_tags(self,st,step):
         while True:#防止读到末尾
-            realength=0
-            tagdict={')':0}
             inputs=[]
             pads=[]
             answer=[]
@@ -58,6 +57,8 @@ class reader(object):
                 outword=[]
                 count+=1
                 total=0
+                singleverb=0
+                '''
 #筛选只有一个动词的句子                
                 for tag in sentence.split():
                     if tag[0]=='(':
@@ -65,14 +66,16 @@ class reader(object):
                             total+=1
                 if total!=1:
                     continue
+                '''
 #前文句子
                 for oldsentence in self.resp[count - self.patchlength:count]:
                     for tag in oldsentence.split():
                         if tag[0]=='(':
-                            if tag not in tagdict:
-                                tagdict[tag]=len(tagdict)
+                            if tag not in self.tagdict:
+                                self.tagdict[tag]=len(self.tagdict)
+                                print(len(self.tagdict))
                             tagword=[0]*self.embedding_size
-                            tagword[tagdict[tag]]=1
+                            tagword[self.tagdict[tag]]=1
                             outword.append(tagword)
                         else:                
                             node=re.match('([^\)]+)(\)*)',tag.strip())
@@ -95,15 +98,18 @@ class reader(object):
                         else:
                             mdflag=0
                             if tag[1:] in self.verbtags:
-                                answer.append(self.verbtags.index(tag[1:]))
+                                if singleverb==0:
+                                    answer.append(self.verbtags.index(tag[1:]))
+                                    singleverb=1
                                 tag='(VB'
                                 vbflag=1
                             else:
                                 vbflag=0
-                            if tag not in tagdict:
-                                tagdict[tag]=len(tagdict)
+                            if tag not in self.tagdict:
+                                self.tagdict[tag]=len(self.tagdict)
+                                print(len(self.tagdict))
                             tagword=[0]*self.embedding_size
-                            tagword[tagdict[tag]]=1
+                            tagword[self.tagdict[tag]]=1
                             outword.append(tagword)
                     else:
                         if mdflag==0:
@@ -127,9 +133,12 @@ class reader(object):
                                     outword.append(tagword)
                 outword=np.array(outword)
 #句子过长
-                if outword.shape[0]>self.maxlength:
-                    print('pass')
+                if outword.shape[0]>self.maxlength: 
+                    #print('pass')
                     answer=answer[:-1]
+                    continue
+                if singleverb==0:
+                    #print('nonverb')
                     continue
 #补零
                 pads.append(outword.shape[0])
