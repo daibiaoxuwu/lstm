@@ -40,7 +40,7 @@ def list_tags():
     inputs=[]
     mlist=os.listdir(training_path)
     print(len(mlist))
-    for inputfile in mlist[7001:14000]:
+    for inputfile in mlist[7000:14000]:
         if inputfile[-4:]=='.txt':
             print(inputfile)
             with open(os.path.join(training_path,inputfile)) as f:
@@ -49,7 +49,7 @@ def list_tags():
                     content=json.loads(resp)
                     for sentence in content['sentences']:
                         parse=sentence['parse'].replace('\n',' ')
-                        with open('/home/d/parseword2','a+') as f:
+                        with open('/home/d/parseword1','a+') as f:
                             f.write(parse+'\n')
                 except:
                     print('error')
