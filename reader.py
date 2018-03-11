@@ -148,3 +148,6 @@ class reader(object):
 #continue the 'while True' loop
             else:
                 return count,inputs,pads,answers
+
+if __name__ == '__main__':
+	model = reader().list_tags(3,5)

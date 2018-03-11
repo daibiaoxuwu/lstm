@@ -15,7 +15,8 @@ class reader(object):
     def __init__(self,\
                 patchlength=0,\
                 maxlength=200,\
-                embedding_size=100):
+                embedding_size=100,\
+                num_verbs=2):
 
 #patchlength:每次输入前文额外的句子的数量.
 #maxlength:每句话的最大长度.(包括前文额外句子).超过该长度的句子会被丢弃.
@@ -23,6 +24,7 @@ class reader(object):
         self.patchlength=patchlength
         self.maxlength=maxlength
         self.embedding_size=embedding_size
+        self.num_verbs=num_verbs
         self.verbtags=['VB','VBZ','VBP','VBD','VBN','VBG'] #所有动词的tag
         self.model=word2vec.load('train/combine100.bin')   #加载词向量模型
         self.tagdict={')':0}
@@ -58,15 +60,13 @@ class reader(object):
                 count+=1
                 total=0
                 singleverb=0
-                '''
-#筛选只有一个动词的句子                
+#筛选只有2个动词的句子                
                 for tag in sentence.split():
                     if tag[0]=='(':
                         if tag[1:] in self.verbtags:
                             total+=1
-                if total!=1:
+                if total!=self.num_verbs:
                     continue
-                '''
 #前文句子
                 for oldsentence in self.resp[count - self.patchlength:count]:
                     for tag in oldsentence.split():
@@ -101,6 +101,11 @@ class reader(object):
                                 if singleverb==0:
                                     answer.append(self.verbtags.index(tag[1:]))
                                     singleverb=1
+                                else:
+                                    answer[-1]*=len(self.verbtags)
+                                    answer[-1]+=self.verbtags.index(tag[1:])
+                                    singleverb+=1
+
                                 tag='(VB'
                                 vbflag=1
                             else:
@@ -137,16 +142,14 @@ class reader(object):
                     #print('pass')
                     answer=answer[:-1]
                     continue
-                if singleverb==0:
-                    #print('nonverb')
-                    continue
+                assert singleverb==self.num_verbs
 #补零
                 pads.append(outword.shape[0])
                 outword=np.pad(outword,((0,self.maxlength-outword.shape[0]),(0,0)),'constant')
                 inputs.append(outword)
             inputs=np.array(inputs)
 #构建输出
-            answers=np.zeros((len(answer),len(self.verbtags)))
+            answers=np.zeros((len(answer),pow(len(self.verbtags),2)))
             for num in range(len(answer)):
                 answers[num][answer[num]]=1
 #用完整个输入,从头开始
