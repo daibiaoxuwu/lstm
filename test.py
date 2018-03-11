@@ -34,7 +34,7 @@ verbtags=['VB','VBZ','VBP','VBD','VBN','VBG']
 global_step = tf.Variable(0, trainable=False)
 initial_learning_rate = 0.001
 learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step=global_step, decay_steps=500,decay_rate=0.8)
-training_iters = 11
+training_iters = 1000
 training_steps=1
 display_step = 10
 
@@ -68,7 +68,7 @@ max_acc=0
 
 print('reading text')
 with open(training_path) as f:
-    resp=f.readlines()[:100]
+    resp=f.readlines()
 print('read data:',len(resp))
 print('loading lemma')
 
