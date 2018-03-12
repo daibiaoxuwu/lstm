@@ -45,117 +45,116 @@ class reader(object):
 
 
     def list_tags(self,batch_size):
-        with open(r'train/resp') as resp:
-            while True:#防止读到末尾
-                realength=0
-                tagdict={')':0}
-                inputs=[]
-                pads=[]
-                answer=[]
-                while len(answer)<batch_size:
-                    sentence=resp.readline()
-                    if sentence=='':
-                        resp.seek(0, os.SEEK_SET)
-                        sentence=resp.readline()
-                        print('epoch')
-                    self.oldqueue.put(sentence)
+        while True:#防止读到末尾
+            realength=0
+            tagdict={')':0}
+            inputs=[]
+            pads=[]
+            answer=[]
+            while len(answer)<batch_size:
+                sentence=self.resp.readline()
+                if sentence=='':
+                    self.resp.seek(0, os.SEEK_SET)
+                    sentence=self.resp.readline()
+                    print('epoch')
+                self.oldqueue.put(sentence)
 
-                    outword=[]
-                    total=0
+                outword=[]
+                total=0
 #筛选只有一个动词的句子                
-                    for tag in sentence.split():
-                        if tag[0]=='(':
-                            if tag[1:] in self.verbtags:
-                                total+=1
-                    if total!=1:
-                        self.oldqueue.get()
-                        continue
+                for tag in sentence.split():
+                    if tag[0]=='(':
+                        if tag[1:] in self.verbtags:
+                            total+=1
+                if total!=1:
+                    self.oldqueue.get()
+                    continue
 #前文句子
-                    newqueue=Queue()
-                    for _ in range(self.patchlength):
-                        oldsentence=self.oldqueue.get()
-                        newqueue.put(oldsentence)
-                        for tag in oldsentence.split():
-                            if tag[0]=='(':
-                                if tag not in tagdict:
-                                    tagdict[tag]=len(tagdict)
+                newqueue=Queue()
+                for _ in range(self.patchlength):
+                    oldsentence=self.oldqueue.get()
+                    newqueue.put(oldsentence)
+                    for tag in oldsentence.split():
+                        if tag[0]=='(':
+                            if tag not in tagdict:
+                                tagdict[tag]=len(tagdict)
+                            tagword=[0]*self.embedding_size
+                            tagword[tagdict[tag]]=1
+                            outword.append(tagword)
+                        else:                
+                            node=re.match('([^\)]+)(\)*)',tag.strip())
+                            if node:
+                                if node.group(1) in self.model:
+                                    outword.append(self.model[node.group(1)].tolist())
+                                else:
+                                    outword.append([0]*self.embedding_size)
                                 tagword=[0]*self.embedding_size
-                                tagword[tagdict[tag]]=1
-                                outword.append(tagword)
-                            else:                
-                                node=re.match('([^\)]+)(\)*)',tag.strip())
-                                if node:
-                                    if node.group(1) in self.model:
-                                        outword.append(self.model[node.group(1)].tolist())
-                                    else:
-                                        outword.append([0]*self.embedding_size)
-                                    tagword=[0]*self.embedding_size
-                                    tagword[0]=1
-                                    for _ in range(len(node.group(2))-1):
-                                        outword.append(tagword)
-                    newqueue.put(self.oldqueue.get())
-                    oldqueue=newqueue
-                    oldqueue.get()
+                                tagword[0]=1
+                                for _ in range(len(node.group(2))-1):
+                                    outword.append(tagword)
+                newqueue.put(self.oldqueue.get())
+                oldqueue=newqueue
+                oldqueue.get()
 
 #本句                
-                    for tag in sentence.split():
-                        if tag[0]=='(':
+                for tag in sentence.split():
+                    if tag[0]=='(':
 #去除情态动词
-                            if tag=='(MD':
-                                mdflag=1
-                            else:
-                                mdflag=0
-                                if tag[1:] in self.verbtags:
-                                    answer.append(self.verbtags.index(tag[1:]))
-                                    tag='(VB'
-                                    vbflag=1
-                                else:
-                                    vbflag=0
-                                if tag not in tagdict:
-                                    tagdict[tag]=len(tagdict)
-                                tagword=[0]*self.embedding_size
-                                tagword[tagdict[tag]]=1
-                                outword.append(tagword)
+                        if tag=='(MD':
+                            mdflag=1
                         else:
-                            if mdflag==0:
-                                node=re.match('([^\)]+)(\)*)',tag.strip())
-                                if node:
-                                    if node.group(1) in self.model:
-                                        if vbflag==1:
+                            mdflag=0
+                            if tag[1:] in self.verbtags:
+                                answer.append(self.verbtags.index(tag[1:]))
+                                tag='(VB'
+                                vbflag=1
+                            else:
+                                vbflag=0
+                            if tag not in tagdict:
+                                tagdict[tag]=len(tagdict)
+                            tagword=[0]*self.embedding_size
+                            tagword[tagdict[tag]]=1
+                            outword.append(tagword)
+                    else:
+                        if mdflag==0:
+                            node=re.match('([^\)]+)(\)*)',tag.strip())
+                            if node:
+                                if node.group(1) in self.model:
+                                    if vbflag==1:
 #去除时态
-                                            node2=self.lemma(node.group(1))
-                                            if node2 in self.model:
-                                                outword.append(self.model[node2].tolist())
-                                            else:
-                                                outword.append([0]*self.embedding_size)
+                                        node2=self.lemma(node.group(1))
+                                        if node2 in self.model:
+                                            outword.append(self.model[node2].tolist())
                                         else:
-                                            outword.append(self.model[node.group(1)].tolist())
+                                            outword.append([0]*self.embedding_size)
                                     else:
-                                        outword.append([0]*self.embedding_size)
-                                    tagword=[0]*self.embedding_size
-                                    tagword[0]=1
-                                    for _ in range(len(node.group(2))-1):
-                                        outword.append(tagword)
-                    outword=np.array(outword)
+                                        outword.append(self.model[node.group(1)].tolist())
+                                else:
+                                    outword.append([0]*self.embedding_size)
+                                tagword=[0]*self.embedding_size
+                                tagword[0]=1
+                                for _ in range(len(node.group(2))-1):
+                                    outword.append(tagword)
+                outword=np.array(outword)
 #句子过长
-                    if outword.shape[0]>self.maxlength:
-                        print('pass')
-                        answer=answer[:-1]
-                        continue
+                if outword.shape[0]>self.maxlength:
+                    print('pass')
+                    answer=answer[:-1]
+                    continue
 #补零
-                    pads.append(outword.shape[0])
-                    outword=np.pad(outword,((0,self.maxlength-outword.shape[0]),(0,0)),'constant')
-                    inputs.append(outword)
+                pads.append(outword.shape[0])
+                outword=np.pad(outword,((0,self.maxlength-outword.shape[0]),(0,0)),'constant')
+                inputs.append(outword)
 
-                inputs=np.array(inputs)
+            inputs=np.array(inputs)
 #构建输出
-                answers=np.zeros((len(answer),len(self.verbtags)))
-                for num in range(len(answer)):
-                    answers[num][answer[num]]=1
+            answers=np.zeros((len(answer),len(self.verbtags)))
+            for num in range(len(answer)):
+                answers[num][answer[num]]=1
 #用完整个输入,从头开始
 #continue the 'while True' loop
-                else:
-                    return inputs,pads,answers
+            else:
+                return inputs,pads,answers
 
 if __name__ == '__main__':
     model = reader().list_tags(5)
