@@ -28,7 +28,6 @@ class reader(object):
         self.resp=open(r'train/resp')
         for _ in range(self.patchlength):
             self.oldqueue.put(self.resp.readline())
-        print(self.oldqueue.qsize())
 
 
 #加载文字
@@ -54,8 +53,6 @@ class reader(object):
                 pads=[]
                 answer=[]
                 while len(answer)<batch_size:
-                    print('s',len(answer))
-
                     sentence=resp.readline()
                     if sentence=='':
                         resp.seek(0, os.SEEK_SET)
@@ -71,14 +68,11 @@ class reader(object):
                             if tag[1:] in self.verbtags:
                                 total+=1
                     if total!=1:
-                        print('ee')
                         self.oldqueue.get()
                         continue
-                    print('ff')
 #前文句子
                     newqueue=Queue()
                     for _ in range(self.patchlength):
-                        print('c',self.oldqueue.qsize())
                         oldsentence=self.oldqueue.get()
                         newqueue.put(oldsentence)
                         for tag in oldsentence.split():
@@ -99,12 +93,9 @@ class reader(object):
                                     tagword[0]=1
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
-                    print('a',self.oldqueue.qsize(),'e')
                     newqueue.put(self.oldqueue.get())
                     oldqueue=newqueue
-                    print('b',self.oldqueue.qsize(),'e')
                     oldqueue.get()
-                    print('d',self.oldqueue.qsize(),'e')
 
 #本句                
                     for tag in sentence.split():

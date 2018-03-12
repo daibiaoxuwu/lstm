@@ -1,8 +1,5 @@
 #encoding:utf-8
-#input.py 
-#learning rate decay
-#patchlength 0 readfrom resp
-#add:saving session
+#reader.py 只看含有一个动词的句子(十分之一左右)
 
 import numpy as np
 import tensorflow as tf

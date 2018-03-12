@@ -4,8 +4,8 @@ import numpy as np
 import tensorflow as tf
 import time
 import os
-import reader
-import rnnmodel
+from readerbig import reader
+from rnnmodel import rnnmodel
 
 os.environ["CUDA_VISIBLE_DEVICES"]="0"#环境变量：使用第一块gpu
 logs_path = 'log/run'
@@ -36,19 +36,19 @@ def elapsed(sec):
         return str(sec/(60*60)) + " hr"
 
 #input
-data=reader.reader(patchlength=patchlength,\
-                    maxlength=maxlength,\
-                    embedding_size=embedding_size)
+data=reader(patchlength=patchlength,\
+            maxlength=maxlength,\
+            embedding_size=embedding_size)
 
 #通过在命令行运行tensorboard --logdir=$logs_path 然后按提示在浏览器打开http://....:6006即可.
 #使用远程服务器的话如果想在自己的电脑上看,需要找到某个公开的端口,如8001, 运行tensorboard --logdir=log/rnn3 然后浏览器打开http://xxx.xxx.xxx.xxx:8001即可(xxx为服务器域名)
 writer = tf.summary.FileWriter(logs_path)
 
-model=rnnmodel.rnnmodel(vocab_size=6,\
-                        maxlength=maxlength,\
-                        embedding_size=embedding_size,\
-                        initial_training_rate=initial_training_rate,\
-                        batch_size=batch_size)
+model=rnnmodel(vocab_size=6,\
+            maxlength=maxlength,\
+            embedding_size=embedding_size,\
+            initial_training_rate=initial_training_rate,\
+            batch_size=batch_size)
 
 # 数据存储器.一定要写在整个网络的末尾.
 saver=tf.train.Saver()
@@ -68,17 +68,15 @@ with tf.Session(config=config) as session:
     loss_total = 0
 
     writer.add_graph(session.graph)
-    count=patchlength
     while step < training_iters:
 #读入一个batch的数据
 #重用的话只要实现自己的reader.py就行.
-#输出:count:指针,指向读到文件的哪个位置
 #inputs:batch_size个输入句子,形状为[batch_size, maxlength, embedding_size]
 #pads:batch内每句话的长度,形状为[batch_size]
 #answers:输入的答案,形状为[batch_size,vocab_size]
-        count,inputs,pads,answers=data.list_tags(count,batch_size)
+        inputs,pads,answers=data.list_tags(batch_size)
 #运行一次
-         _, acc, loss, onehot_pred, summary= session.run([model.optimizer, model.accuracy, model.cost, model.pred, merged], \
+        _, acc, loss, onehot_pred, summary= session.run([model.optimizer, model.accuracy, model.cost, model.pred, merged], \
                                                 feed_dict={model.x: inputs, model.y: answers, model.p:pads})
 #累加计算平均正确率
         loss_total += loss
@@ -90,7 +88,7 @@ with tf.Session(config=config) as session:
 #输出
         if step % display_step == 0:
             writer.add_summary(summary, step)
-            print("Iter= " + str(step+1) + ", used: "+str(count)+ ", Average Loss= " + \
+            print("Iter= " + str(step+1) + ", Average Loss= " + \
                   "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
                   "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
             start_time=time.time()
