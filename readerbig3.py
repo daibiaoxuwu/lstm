@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorflow.contrib import rnn
 import word2vec
 import re
+import os
 import pickle
 from queue import Queue
 
@@ -99,6 +100,7 @@ class reader(object):
                 self.oldqueue=newqueue
                 self.oldqueue.put(sentence)
                 self.oldqueue.get()
+                #print('point at:',self.resp.tell())
 
 #本句                
                 for tag in sentence.split():
@@ -169,4 +171,6 @@ class reader(object):
                 return inputs,pads,answers
 
 if __name__ == '__main__':
-    model = reader().list_tags(5)
+    model = reader()
+    model.list_tags(5)
+    model.list_tags(5)

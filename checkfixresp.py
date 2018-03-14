@@ -17,19 +17,20 @@ import requests
 training_path='train/parseword' 
 def list_tags(resp): 
     with open('train/resp') as g: 
+        big=g.readlines()
+        print('resplength',len(big))
         st=0 
         en=1 
         while en<len(resp): 
             if(resp[en].strip()=='(ROOT'): 
                 gg=' '.join(resp[st:en]).replace('\n',' ') 
-                print(g.readlines().index(gg))
+                print(big.index(gg))
                 break
-            else:
-                print(resp[en])
             en+=1
  
-with open(training_path+'44') as f: 
-    resp = f.readlines() 
+with open(training_path+'22') as f: 
+    resp = f.read().split()
+    print('parsword',len(resp))
     list_tags(resp) 
     ''' 
 with open(training_path+'22') as f: 
