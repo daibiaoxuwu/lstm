@@ -35,6 +35,15 @@ def elapsed(sec):
     else:
         return str(sec/(60*60)) + " hr"
 
+def getMem():
+    with open('/proc/meminfo') as f:
+        total = int(f.readline().split()[1])
+        free = int(f.readline().split()[1])
+        buffers = int(f.readline().split()[1])
+        cache = int(f.readline().split()[1])
+        if(buffers<1024000):
+            raise NameError
+
 #input
 data=reader2.reader(patchlength=patchlength,\
                     maxlength=maxlength,\
@@ -70,6 +79,7 @@ with tf.Session() as session:
     writer.add_graph(session.graph)
     count=patchlength
     while step < training_iters:
+        getMem()
 #读入一个batch的数据
 #重用的话只要实现自己的reader.py就行.
 #输出:count:指针,指向读到文件的哪个位置
