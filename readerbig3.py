@@ -162,7 +162,7 @@ class reader(object):
 
             inputs=np.array(inputs)
 #构建输出
-            answers=np.zeros((len(answer),pow(len(self.verbtags),2)))
+            answers=np.zeros((len(answer),pow(len(self.verbtags),self.num_verbs)))
             for num in range(len(answer)):
                 answers[num][answer[num]]=1
 #用完整个输入,从头开始
