@@ -1,5 +1,5 @@
 #encoding:utf-8
-#n51.py 
+#rnnmodel3.py 针对两个动词
 #learning rate decay
 #patchlength 0 readfrom resp
 #add:saving session
@@ -10,12 +10,15 @@ from tensorflow.contrib import rnn
 
 class rnnmodel(object):
     def __init__(self,\
-                vocab_size=6,\
+                vocab_single=6,\
                 maxlength=200,\
                 embedding_size=100,\
                 initial_training_rate=0.001,\
-                batch_size=1):
+                batch_size=1,\
+                num_verbs=2):
 
+#针对多个动词:
+        vocab_size=pow(vocab_single,num_verbs)
 #learning_rate 可依次递减.然而global_step好像只能在run里每train一次+1,而不能写在这个init函数里?不太清楚.
 #每500步变为原来的0.8倍,指数递减.
         self.global_step = tf.Variable(0, trainable=False)
