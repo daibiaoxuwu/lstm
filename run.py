@@ -27,9 +27,10 @@ maxlength=700                   #输入序列最大长度
 initial_training_rate=0.001     #学习率
 training_iters = 10000000       #迭代次数
 batch_size=50                   #batch数量
-display_step = 50               #多少步输出一次结果
-saving_step=2000                #多少步保存一次
+display_step = 1               #多少步输出一次结果
+saving_step=200                #多少步保存一次
 num_verbs=2                     #一次看两个动词
+allinclude=False                #只看刚好含有num_verbs个动词的句子
 
 reader = importlib.import_module('reader')
 rnnmodel = importlib.import_module('rnnmodel')
@@ -37,7 +38,7 @@ rnnmodel = importlib.import_module('rnnmodel')
 
 config=tf.ConfigProto()
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:a")
+    opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:ais:")
 except getopt.GetoptError:
     print('使用不正确.详见python run.py -h')
     sys.exit()
@@ -53,6 +54,7 @@ run.py  -g 使用gpu号(0,1) 默认:0
         -m rnn模型(模型名,文件名去掉.py 默认:rnnmodel)
         -a 存储的allow_growth(不填)(默认:不允许)
         -s 保存用的标识,默认:run.log路径为log/run,保存路径为ckpt/run/run.ckpt
+        -i allinclude 默认为读入时只读入含有num_verbs个动词的句子, 设置后读入所有含有不少于num_verbs的句子
         ''')
         sys.exit()
     elif opt=="-g":
@@ -74,6 +76,8 @@ run.py  -g 使用gpu号(0,1) 默认:0
     elif opt=="-s":
         logs_path = 'log/'+arg
         saving_path='ckpt/'+arg+'/'+arg+'.ckpt'
+    elif opt=="-i":
+        allinclude=True
 
 
 
@@ -84,8 +88,11 @@ def getMem():
         free = int(f.readline().split()[1])
         buffers = int(f.readline().split()[1])
         cache = int(f.readline().split()[1])
-        if(buffers<1024000):
-            raise NameError
+        while(buffers<5000000):
+            print('wait',buffers)
+            time.sleep(60)
+            buffers = int(f.readline().split()[1])
+        return buffers
 
 #input
 data=reader.reader(patchlength=patchlength,\
@@ -122,7 +129,6 @@ with tf.Session(config=config) as session:
 
     writer.add_graph(session.graph)
     while step < training_iters:
-        getMem()
 #读入一个batch的数据
 #重用的话只要实现自己的reader.py就行.
 #输出:count:指针,指向读到文件的哪个位置
@@ -143,7 +149,7 @@ with tf.Session(config=config) as session:
 #输出
         if step % display_step == 0:
             writer.add_summary(summary, step)
-            print("Iter= " + str(step+1) + ", Average Loss= " + \
+            print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
                   "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
                   "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
             start_time=time.time()
