@@ -3,16 +3,9 @@
 from __future__ import print_function 
  
 import numpy as np 
-import tensorflow as tf 
-from tensorflow.contrib import rnn 
-import random 
-import collections 
-import time 
-import word2vec 
 import os 
 import json 
 import re 
-import requests 
  
 training_path='train/parseword' 
 def list_tags(resp): 
@@ -23,7 +16,8 @@ def list_tags(resp):
         en=1 
         while en<len(resp): 
             if(resp[en].strip()=='(ROOT'): 
-                gg=' '.join(resp[st:en]).replace('\n',' ') 
+                gg=' '.join(resp[st:en]).replace('\n',' ')
+                print(gg)
                 print(big.index(gg))
                 break
             en+=1

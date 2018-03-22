@@ -52,13 +52,15 @@ class reader(object):
 
 
     def list_tags(self):
+        count=0
         while True:#防止读到末尾
             inputs=[]
             pads=[]
             answer=[]
             while True:
+                count+=1
+                print('c:',count)
                 sentence=self.resp.readline()
-                print(sentence)
                 if sentence=='':
                     self.resp.seek(0, os.SEEK_SET)
                     sentence=self.resp.readline()
@@ -116,7 +118,7 @@ class reader(object):
 #去除情态动词
                         if tag=='(MD':
                             mdflag=1
-                            printline=1
+                          #  printline=1
                         else:
                             mdflag=0
                             if tag[1:] in self.verbtags:
@@ -141,7 +143,10 @@ class reader(object):
                         if True:
                             node=re.match('([^\)]+)(\)*)',tag.strip())
                             if node:
+                                if node.group(1)=='would':
+                                    printline=1
                                 realline+=node.group(1)
+                                realline+=' '
                                 if node.group(1) in self.model:
                                     if vbflag==1:
 #去除时态
@@ -160,6 +165,7 @@ class reader(object):
                                     outword.append(tagword)
                 if printline==1:
                     print(realline)
+                    input()
                 outword=np.array(outword)
 #句子过长
                 if outword.shape[0]>self.maxlength:
