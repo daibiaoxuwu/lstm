@@ -8,6 +8,19 @@ import os
 import pickle
 from queue import Queue
 
+def getMem(in):
+    with open('/proc/meminfo') as f:
+        total = int(f.readline().split()[1])
+        free = int(f.readline().split()[1])
+        buffers = int(f.readline().split()[1])
+        cache = int(f.readline().split()[1])
+        print('mem',buffers,in)
+        while(buffers<1000000):
+            print('wait',buffers)
+            time.sleep(60)
+            buffers = int(f.readline().split()[1])
+        return buffers
+
 class reader(object):
     def __init__(self,\
                 patchlength=3,\
@@ -61,6 +74,7 @@ class reader(object):
             answer=[]
             count=0
             while len(answer)<batch_size:
+                getMem(0)
 
                 sentence=self.resp[pointer]
                 pointer+=1
@@ -73,6 +87,7 @@ class reader(object):
                 outword=[]
                 total=0
                 singleverb=0
+                getMem(1)
 #筛选只有一个动词的句子                
                 for tag in sentence.split():
                     if tag[0]=='(':
@@ -84,6 +99,7 @@ class reader(object):
                     continue
 #前文句子
                 newqueue=Queue()
+                getMem(2)
                 for _ in range(self.patchlength):
                     oldsentence=self.oldqueue.get()
                     newqueue.put(oldsentence)
@@ -110,9 +126,11 @@ class reader(object):
                                     tagword[0]=1
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
+                getMem(3)
                 self.oldqueue=newqueue
                 self.oldqueue.put(sentence)
                 self.oldqueue.get()
+                getMem(4)
                 #print('point at:',self.resp.tell())
 
 #本句                
@@ -163,18 +181,23 @@ class reader(object):
                                     tagword[0]=1
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
+                getMem(5)
                 outword=np.array(outword)
+                getMem(6)
 #句子过长
                 if outword.shape[0]>self.maxlength:
                     print('pass')
                     answer=answer[:-1]
                     continue
 #补零
+                getMem(7)
                 pads.append(outword.shape[0])
                 outword=np.pad(outword,((0,self.maxlength-outword.shape[0]),(0,0)),'constant')
                 inputs.append(outword)
+                getMem(8)
 
             inputs=np.array(inputs)
+            getMem(9)
 #构建输出
             answers=np.zeros((len(answer),pow(len(self.verbtags),self.num_verbs)))
             for num in range(len(answer)):
