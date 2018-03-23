@@ -3,6 +3,7 @@ train/*
 ckpt*/*
 *.swp
 *.swo
+save/*
 __pycache__/*
 
 

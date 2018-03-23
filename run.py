@@ -15,6 +15,7 @@ from elapsed import elapsed
 os.environ["CUDA_VISIBLE_DEVICES"]="0"#环境变量：使用第一块gpu
 logs_path = 'log/run'
 saving_path='ckpt/run/run.ckpt'
+load_path='ckpt/run/'
 
 #神经网络的输入是一句只有一个动词的句子（以及其语法树），把动词变为原型，语法树的tag变为了VB。
 #并预测它的动词时态。如果它不为0，输入变为这句话以及他前面的patchlength句话。
@@ -24,11 +25,11 @@ saving_path='ckpt/run/run.ckpt'
 patchlength=3                   #输入的前文句子的数量
 embedding_size=100              #词向量维度数量
 maxlength=700                   #输入序列最大长度
-initial_training_rate=0.001     #学习率
+initial_training_rate=0.0002     #学习率
 training_iters = 10000000       #迭代次数
 batch_size=50                   #batch数量
 display_step = 1               #多少步输出一次结果
-saving_step=200                #多少步保存一次
+saving_step=20                 #多少步保存一次
 num_verbs=2                     #一次看两个动词
 allinclude=False                #只看刚好含有num_verbs个动词的句子
 
@@ -37,8 +38,11 @@ rnnmodel = importlib.import_module('rnnmodel')
 
 
 config=tf.ConfigProto()
+loadold=False
+shorten=False
+shorten_front=False
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:ais:")
+    opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:ais:oS")
 except getopt.GetoptError:
     print('使用不正确.详见python run.py -h')
     sys.exit()
@@ -55,6 +59,8 @@ run.py  -g 使用gpu号(0,1) 默认:0
         -a 存储的allow_growth(不填)(默认:不允许)
         -s 保存用的标识,默认:run.log路径为log/run,保存路径为ckpt/run/run.ckpt
         -i allinclude 默认为读入时只读入含有num_verbs个动词的句子, 设置后读入所有含有不少于num_verbs的句子
+        -o 是否从上次的模型加载
+        -S shorten=True shorten_front=True
         ''')
         sys.exit()
     elif opt=="-g":
@@ -76,8 +82,14 @@ run.py  -g 使用gpu号(0,1) 默认:0
     elif opt=="-s":
         logs_path = 'log/'+arg
         saving_path='ckpt/'+arg+'/'+arg+'.ckpt'
+        load_path='ckpt/'+arg
     elif opt=="-i":
         allinclude=True
+    elif opt=="-o":
+        loadold=True
+    elif opt=="-S":
+        shorten=True
+        shorten_front=True
 
 
 
@@ -99,7 +111,9 @@ data=reader.reader(patchlength=patchlength,\
             maxlength=maxlength,\
             embedding_size=embedding_size,\
             num_verbs=num_verbs,\
-            allinclude=False)
+            allinclude=False,\
+            shorten=shorten,\
+            shorten_front=shorten_front)
 
 
 model=rnnmodel.rnnmodel(vocab_single=6,\
@@ -123,6 +137,9 @@ merged = tf.summary.merge_all()
 print('start session')
 with tf.Session(config=config) as session:
     session.run(tf.global_variables_initializer())#初始化变量
+    if loadold:
+        ckpt = tf.train.get_checkpoint_state(load_path)
+        saver.restore(session, ckpt.model_checkpoint_path)  
     step = 0
     acc_total = 0
     loss_total = 0

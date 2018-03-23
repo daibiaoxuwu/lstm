@@ -3,8 +3,6 @@
 
 
 import numpy as np
-import tensorflow as tf
-from tensorflow.contrib import rnn
 import word2vec
 import re
 import os

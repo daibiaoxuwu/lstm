@@ -2,8 +2,6 @@
 #reader.py 只看含有一个动词的句子(十分之一左右)
 
 import numpy as np
-import tensorflow as tf
-from tensorflow.contrib import rnn
 import word2vec
 import re
 import os
@@ -16,11 +14,15 @@ class reader(object):
                 maxlength=700,\
                 embedding_size=100,\
                 num_verbs=2,\
-                allinclude=False):
+                allinclude=False,\
+                shorten=False,\
+                shorten_front=False):   #几句前文是否shorten #是否输出不带tag,只有单词的句子 
 
 #patchlength:每次输入前文额外的句子的数量.
 #maxlength:每句话的最大长度.(包括前文额外句子).超过该长度的句子会被丢弃.
 #embedding_size:词向量维度数.
+        self.shorten=shorten
+        self.shorten_front=shorten_front   #几句前文是否shorten #是否输出不带tag,只有单词的句子 
         self.patchlength=patchlength
         self.maxlength=maxlength
         self.embedding_size=embedding_size
@@ -55,11 +57,13 @@ class reader(object):
             inputs=[]
             pads=[]
             answer=[]
+            count=0
             while len(answer)<batch_size:
 
                 sentence=self.resp.readline()
                 if sentence=='':
-                    self.resp.seek(0, os.SEEK_SET)
+                    self.resp.close()
+                    self.resp=open(r'train/resp')
                     sentence=self.resp.readline()
                     print('epoch')
 
@@ -87,18 +91,22 @@ class reader(object):
                                 print(len(self.tagdict))
                             tagword=[0]*self.embedding_size
                             tagword[self.tagdict[tag]]=1
-                            outword.append(tagword)
+                            if not self.shorten_front:
+                                outword.append(tagword)
                         else:                
                             node=re.match('([^\)]+)(\)*)',tag.strip())
                             if node:
+                                #group(1) 单词
                                 if node.group(1) in self.model:
                                     outword.append(self.model[node.group(1)].tolist())
                                 else:
                                     outword.append([0]*self.embedding_size)
-                                tagword=[0]*self.embedding_size
-                                tagword[0]=1
-                                for _ in range(len(node.group(2))-1):
-                                    outword.append(tagword)
+                                #group(2) 括号
+                                if not self.shorten_front:
+                                    tagword=[0]*self.embedding_size
+                                    tagword[0]=1
+                                    for _ in range(len(node.group(2))-1):
+                                        outword.append(tagword)
                 self.oldqueue=newqueue
                 self.oldqueue.put(sentence)
                 self.oldqueue.get()
@@ -129,7 +137,8 @@ class reader(object):
                                 print(len(self.tagdict))
                             tagword=[0]*self.embedding_size
                             tagword[self.tagdict[tag]]=1
-                            outword.append(tagword)
+                            if not self.shorten:
+                                outword.append(tagword)
                     else:
                         if mdflag==0:
                             node=re.match('([^\)]+)(\)*)',tag.strip())
@@ -146,10 +155,11 @@ class reader(object):
                                         outword.append(self.model[node.group(1)].tolist())
                                 else:
                                     outword.append([0]*self.embedding_size)
-                                tagword=[0]*self.embedding_size
-                                tagword[0]=1
-                                for _ in range(len(node.group(2))-1):
-                                    outword.append(tagword)
+                                if not self.shorten:
+                                    tagword=[0]*self.embedding_size
+                                    tagword[0]=1
+                                    for _ in range(len(node.group(2))-1):
+                                        outword.append(tagword)
                 outword=np.array(outword)
 #句子过长
                 if outword.shape[0]>self.maxlength:
@@ -168,10 +178,10 @@ class reader(object):
                 answers[num][answer[num]]=1
 #用完整个输入,从头开始
 #continue the 'while True' loop
-            else:
-                return inputs,pads,answers
+            return inputs,pads,answers
 
 if __name__ == '__main__':
     model = reader()
-    model.list_tags(5)
-    model.list_tags(5)
+    for i in range(500000000):
+        model.list_tags(500)
+        print('i',i)
