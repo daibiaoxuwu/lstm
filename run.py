@@ -25,7 +25,7 @@ load_path='ckpt/run/'
 patchlength=3                   #输入的前文句子的数量
 embedding_size=100              #词向量维度数量
 maxlength=700                   #输入序列最大长度
-initial_training_rate=0.0002     #学习率
+initial_training_rate=0.00005     #学习率
 training_iters = 10000000       #迭代次数
 batch_size=50                   #batch数量
 display_step = 1               #多少步输出一次结果
@@ -100,7 +100,7 @@ def getMem():
         free = int(f.readline().split()[1])
         buffers = int(f.readline().split()[1])
         cache = int(f.readline().split()[1])
-        while(buffers<5000000):
+        while(buffers<1000000):
             print('wait',buffers)
             time.sleep(60)
             buffers = int(f.readline().split()[1])

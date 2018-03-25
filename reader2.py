@@ -14,7 +14,6 @@ def getMem(ini):
         free = int(f.readline().split()[1])
         buffers = int(f.readline().split()[1])
         cache = int(f.readline().split()[1])
-        print('mem',buffers,ini)
         while(buffers<1000000):
             print('wait',buffers)
             time.sleep(60)
@@ -47,10 +46,11 @@ class reader(object):
         print('loaded model')
         self.oldqueue=Queue()
         self.resp=open(r'train/resp').readlines()
+        self.readlength=len(self.resp)
         self.pointer=0
         for _ in range(self.patchlength):
-            self.oldqueue.put(self.resp[pointer])
-            pointer+=1
+            self.oldqueue.put(self.resp[self.pointer])
+            self.pointer+=1
 
 
 #加载文字
@@ -76,12 +76,12 @@ class reader(object):
             while len(answer)<batch_size:
                 getMem(0)
 
-                sentence=self.resp[pointer]
-                pointer+=1
-                if sentence=='':
-                    pointer=0
-                    sentence=self.resp[pointer]
-                    pointer+=1
+                sentence=self.resp[self.pointer]
+                self.pointer+=1
+                if self.pointer==self.readlength:
+                    self.pointer=0
+                    sentence=self.resp[self.pointer]
+                    self.pointer+=1
                     print('epoch')
 
                 outword=[]

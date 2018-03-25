@@ -9,7 +9,7 @@ import tensorflow as tf
 import time
 import os
 from attnmodel import BiRNN
-from reader import reader
+from reader2 import reader
 
 # Parameters
 # =================================================
@@ -27,11 +27,11 @@ tf.flags.DEFINE_float('learning_rate', 0.001, 'learning rate')
 tf.flags.DEFINE_string('train_file', 'rt_train.txt', 'train raw file')
 tf.flags.DEFINE_string('test_file', 'rt_test.txt', 'train raw file')
 tf.flags.DEFINE_string('data_dir', 'data', 'data directory')
-tf.flags.DEFINE_string('save_dir', 'save', 'model saved directory')
-tf.flags.DEFINE_string('log_dir', 'log', 'log info directiory')
+tf.flags.DEFINE_string('save_dir', 'ckpt/runattn', 'model saved directory')
+tf.flags.DEFINE_string('log_dir', 'log/runattn', 'log info directiory')
 tf.flags.DEFINE_string('pre_trained_vec', None, 'using pre trained word embeddings, npy file format')
 #tf.flags.DEFINE_string('init_from', 'save', 'continue training from saved model at this path')
-tf.flags.DEFINE_string('init_from', None, 'continue training from saved model at this path')
+tf.flags.DEFINE_string('init_from', 'ckpt/runattn', 'continue training from saved model at this path')
 #tf.flags.DEFINE_integer('save_steps', 1000, 'num of train steps for saving model')
 tf.flags.DEFINE_integer('vocab_size', 1000, 'num of train steps for saving model')
 tf.flags.DEFINE_integer('n_classes', 6, 'num of train steps for saving model')
@@ -73,11 +73,10 @@ def getMem(aa):
         free = int(f.readline().split()[1])
         buffers = int(f.readline().split()[1])
         cache = int(f.readline().split()[1])
-        while buffers<50000000:
+        while buffers<10000000:
             print('wait',buffers,aa)
             time.sleep(60)
             buffers = int(f.readline().split()[1])
-        print('run',buffers,aa)
 
 
 # Target log path
@@ -162,7 +161,7 @@ def main(_):
 
 
             
-            if e % 20 == 0:
+            if e % 100 == 0:
                 print('{}/{} , train_loss = {:.3f}, time/batch = {:.3f}'.format(e, FLAGS.num_batches,  total_loss/20, time.time()-start))
                 start = time.time()
                 total_loss=0
@@ -171,7 +170,7 @@ def main(_):
             if e % 100 == 0:
                 train_writer.add_summary(summary, e)
 
-            if e % 200 == 0:
+            if e % 1000 == 0:
                 checkpoint_path = os.path.join(FLAGS.save_dir, 'model.ckpt')        
                 saver.save(sess, checkpoint_path, global_step=e)
                 print('model saved to {}'.format(checkpoint_path))
