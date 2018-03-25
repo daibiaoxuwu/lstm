@@ -7,7 +7,10 @@ import re
 import os
 import pickle
 import random
+import requests
+import json
 from queue import Queue
+#bug:shorten和shorten_front不一样的话,每一遍都得重新计算而不是直接从队列里拿出来!
 
 def getMem(ini):
     with open('/proc/meminfo') as f:
@@ -22,6 +25,16 @@ def getMem(ini):
         return buffers
 
 class reader(object):
+    def parse(self,text):
+        url = 'http://127.0.0.1:9000'
+        params = {'properties' : r"{'annotators': 'tokenize,ssplit,pos,lemma,parse', 'outputFormat': 'json'}"}
+        while True:
+            try:
+                resp = requests.post(url, input(), params=params).text
+                content=json.loads(resp)
+                return re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' '))
+            except:
+                print('error, retrying...')
     def __init__(self,\
                 patchlength=3,\
                 maxlength=700,\
@@ -29,7 +42,8 @@ class reader(object):
                 num_verbs=2,\
                 allinclude=False,\
                 shorten=False,\
-                shorten_front=False):   #几句前文是否shorten #是否输出不带tag,只有单词的句子 
+                shorten_front=False,\
+                testflag=False):   #几句前文是否shorten #是否输出不带tag,只有单词的句子 
 
 #patchlength:每次输入前文额外的句子的数量.
 #maxlength:每句话的最大长度.(包括前文额外句子).超过该长度的句子会被丢弃.
@@ -46,13 +60,20 @@ class reader(object):
         self.tagdict={')':0}
         print('loaded model')
         self.oldqueue=Queue()
-        self.resp=open(r'train/resp').readlines()
-        self.readlength=len(self.resp)
-        self.pointer=random.randint(0,self.readlength-1)
-        for _ in range(self.patchlength):
-            self.oldqueue.put(self.resp[self.pointer])
-            self.pointer+=1
-
+        self.testflag=testflag
+        if testflag==False:
+            self.resp=open(r'train/resp').readlines()
+            self.readlength=len(self.resp)
+            self.pointer=random.randint(0,self.readlength-1)
+            for _ in range(self.patchlength):
+                self.oldqueue.put(self.resp[self.pointer])
+                self.pointer+=1
+        else:
+            for _ in range(self.patchlength):
+                if shorten_front==True:
+                    self.oldqueue.put(input())
+                else:
+                    self.oldqueue.put(self.parse(input()))
 
 #加载文字
 
@@ -61,12 +82,19 @@ class reader(object):
             self.ldict = pickle.load(f)
         print('loaded lemma')
     def lemma(self,verb):
+        url = 'http://127.0.0.1:9000'
+        params = {'properties' : r"{'annotators': 'lemma', 'outputFormat': 'json'}"}
+        resp = requests.post(url, verb, params=params).text
+        content=json.loads(resp)
+        return content['sentences'][0]['tokens'][0]['lemma']
+'''
+    def lemma(self,verb):
         if verb in self.ldict:
             return self.ldict[verb]
         else:
             print('errverb:',verb)
             return verb
-
+'''
 
     def list_tags(self,batch_size):
         while True:#防止读到末尾
@@ -77,13 +105,17 @@ class reader(object):
             while len(answer)<batch_size:
                 getMem(0)
 
-                sentence=self.resp[self.pointer]
-                self.pointer+=1
-                if self.pointer==self.readlength:
-                    self.pointer=0
+                if testflag==True:
+                    if shorten==True:
+                        sentence=input()
+                    else:
+                        sentence=self.parse(input())
+                else:
                     sentence=self.resp[self.pointer]
                     self.pointer+=1
-                    print('epoch')
+                    if self.pointer==self.readlength:
+                        self.pointer=0
+                        print('epoch')
 
                 outword=[]
                 total=0

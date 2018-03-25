@@ -41,8 +41,9 @@ config=tf.ConfigProto()
 loadold=False
 shorten=False
 shorten_front=False
+testflag=False
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:ais:oS")
+    opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:ais:oSt")
 except getopt.GetoptError:
     print('使用不正确.详见python run.py -h')
     sys.exit()
@@ -61,6 +62,7 @@ run.py  -g 使用gpu号(0,1) 默认:0
         -i allinclude 默认为读入时只读入含有num_verbs个动词的句子, 设置后读入所有含有不少于num_verbs的句子
         -o 是否从上次的模型加载
         -S shorten=True shorten_front=True
+        -t test
         ''')
         sys.exit()
     elif opt=="-g":
@@ -90,6 +92,8 @@ run.py  -g 使用gpu号(0,1) 默认:0
     elif opt=="-S":
         shorten=True
         shorten_front=True
+    elif opt=='-t':
+        testflag=True
 
 
 
@@ -113,7 +117,8 @@ data=reader.reader(patchlength=patchlength,\
             num_verbs=num_verbs,\
             allinclude=False,\
             shorten=shorten,\
-            shorten_front=shorten_front)
+            shorten_front=shorten_front,\
+            testflag=testflag)
 
 
 model=rnnmodel.rnnmodel(vocab_single=6,\
