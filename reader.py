@@ -6,6 +6,7 @@ import word2vec
 import re
 import os
 import pickle
+import random
 from queue import Queue
 
 def getMem(ini):
@@ -47,7 +48,7 @@ class reader(object):
         self.oldqueue=Queue()
         self.resp=open(r'train/resp').readlines()
         self.readlength=len(self.resp)
-        self.pointer=0
+        self.pointer=random.randint(0,self.readlength-1)
         for _ in range(self.patchlength):
             self.oldqueue.put(self.resp[self.pointer])
             self.pointer+=1
@@ -186,7 +187,7 @@ class reader(object):
                 getMem(6)
 #句子过长
                 if outword.shape[0]>self.maxlength:
-                    print('pass')
+#                    print('pass')
                     answer=answer[:-1]
                     continue
 #补零

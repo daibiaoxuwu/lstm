@@ -9,7 +9,7 @@ import tensorflow as tf
 import time
 import os
 from attnmodel import BiRNN
-from reader2 import reader
+from reader import reader
 
 # Parameters
 # =================================================
