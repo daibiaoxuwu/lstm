@@ -93,6 +93,7 @@ run.py  -g 使用gpu号(0,1) 默认:0
         shorten=True
         shorten_front=True
     elif opt=='-t':
+        batch_size=1
         testflag=True
 
 
@@ -157,29 +158,34 @@ with tf.Session(config=config) as session:
 #inputs:batch_size个输入句子,形状为[batch_size, maxlength, embedding_size]
 #pads:batch内每句话的长度,形状为[batch_size]
 #answers:输入的答案,形状为[batch_size,vocab_size]
+        print('i')
         inputs,pads,answers=data.list_tags(batch_size)
+        print('0')
 #运行一次
-        _, acc, loss, onehot_pred, summary= session.run([model.optimizer, model.accuracy, model.cost, model.pred, merged], \
+        _,pred, acc, loss, onehot_pred, summary= session.run([model.optimizer, model.pred, model.accuracy, model.cost, model.pred, merged], \
                                                 feed_dict={model.x: inputs, model.y: answers, model.p:pads})
 #累加计算平均正确率
-        loss_total += loss
-        acc_total += acc
-        step += 1
+        if testflag==True:
+            print('pred:', reader.printtag(tf.argmax(self.pred).eval()))
+        else:
+            loss_total += loss
+            acc_total += acc
+            step += 1
 #帮global_step(用来调节学习率指数下降的)加一
-        model.global_step += 1
-        #print(model.global_step.eval())
+            model.global_step += 1
+            #print(model.global_step.eval())
 #输出
-        if step % display_step == 0:
-            writer.add_summary(summary, step)
-            print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
-                  "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
-                  "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
-            start_time=time.time()
-            acc_total = 0
-            loss_total = 0
+            if step % display_step == 0:
+                writer.add_summary(summary, step)
+                print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
+                      "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
+                      "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
+                start_time=time.time()
+                acc_total = 0
+                loss_total = 0
 #保存
-        if step % saving_step ==0:
-            print('saved to: ', saver.save(session,saving_path,global_step=step))
+            if step % saving_step ==0:
+                print('saved to: ', saver.save(session,saving_path,global_step=step))
     print("Optimization Finished!")
     print("Run on command line.")
     print("\ttensorboard --logdir=%s" % (logs_path))

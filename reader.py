@@ -25,12 +25,16 @@ def getMem(ini):
         return buffers
 
 class reader(object):
+    def printtag(self,number):
+        return [k for k, v in self.tagdict.items() if v == number][0]
     def parse(self,text):
+        if(text=='\n'):
+            raise NameError
         url = 'http://127.0.0.1:9000'
         params = {'properties' : r"{'annotators': 'tokenize,ssplit,pos,lemma,parse', 'outputFormat': 'json'}"}
         while True:
             try:
-                resp = requests.post(url, input(), params=params).text
+                resp = requests.post(url, input('type sentence:'), params=params).text
                 content=json.loads(resp)
                 return re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' '))
             except:
@@ -71,9 +75,9 @@ class reader(object):
         else:
             for _ in range(self.patchlength):
                 if shorten_front==True:
-                    self.oldqueue.put(input())
+                    self.oldqueue.put(input('type sentence:'))
                 else:
-                    self.oldqueue.put(self.parse(input()))
+                    self.oldqueue.put(self.parse(input('type sentence:')))
 
 #加载文字
 
@@ -87,15 +91,14 @@ class reader(object):
         resp = requests.post(url, verb, params=params).text
         content=json.loads(resp)
         return content['sentences'][0]['tokens'][0]['lemma']
-'''
+    '''
     def lemma(self,verb):
         if verb in self.ldict:
             return self.ldict[verb]
         else:
             print('errverb:',verb)
             return verb
-'''
-
+    '''
     def list_tags(self,batch_size):
         while True:#防止读到末尾
             inputs=[]
@@ -105,14 +108,15 @@ class reader(object):
             while len(answer)<batch_size:
                 getMem(0)
 
-                if testflag==True:
-                    if shorten==True:
-                        sentence=input()
+                if self.testflag==True:
+                    if self.shorten==True:
+                        sentence=input('type sentence:')
                     else:
-                        sentence=self.parse(input())
+                        sentence=self.parse(input('type sentence:'))
                 else:
                     sentence=self.resp[self.pointer]
                     self.pointer+=1
+                    #print(self.pointer)
                     if self.pointer==self.readlength:
                         self.pointer=0
                         print('epoch')
