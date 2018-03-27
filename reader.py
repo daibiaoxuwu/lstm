@@ -9,22 +9,26 @@ import pickle
 import random
 import requests
 import json
+import time
 from queue import Queue
 #bug:shorten和shorten_front不一样的话,每一遍都得重新计算而不是直接从队列里拿出来!
 
-def getMem(ini):
-    with open('/proc/meminfo') as f:
-        total = int(f.readline().split()[1])
-        free = int(f.readline().split()[1])
-        buffers = int(f.readline().split()[1])
-        cache = int(f.readline().split()[1])
-        while(buffers<1000000):
-            print('wait',buffers)
-            time.sleep(60)
-            buffers = int(f.readline().split()[1])
-        return buffers
 
 class reader(object):
+    def getMem(self,ini):
+        with open('/proc/meminfo') as f:
+            total = int(f.readline().split()[1])
+            free = int(f.readline().split()[1])
+            buffers = int(f.readline().split()[1])
+            cache = int(f.readline().split()[1])
+            while(buffers<10000000):
+                print('wait',buffers)
+                time.sleep(60)
+                buffers = int(f.readline().split()[1])
+            if self.dangerflag==True:
+                print('danger',ini,buffers)
+            return buffers
+
     def parse(self,text):
         print('parse')
         params = {'properties' : r"{'annotators': 'tokenize,ssplit,pos,lemma,parse', 'outputFormat': 'json'}"}
@@ -48,7 +52,9 @@ class reader(object):
 #patchlength:每次输入前文额外的句子的数量.
 #maxlength:每句话的最大长度.(包括前文额外句子).超过该长度的句子会被丢弃.
 #embedding_size:词向量维度数.
+        self.dangerflag=False
         self.url = 'http://166.111.139.15:9000'
+
         self.shorten=shorten
         self.shorten_front=shorten_front   #几句前文是否shorten #是否输出不带tag,只有单词的句子 
         self.patchlength=patchlength
@@ -56,16 +62,20 @@ class reader(object):
         self.embedding_size=embedding_size
         self.num_verbs=num_verbs
         self.allinclude=allinclude
+        self.testflag=testflag
+
         self.verbtags=['VB','VBZ','VBP','VBD','VBN','VBG'] #所有动词的tag
         self.model=word2vec.load('train/combine100.bin')   #加载词向量模型
         self.tagdict={')':0}
         print('loaded model')
         self.oldqueue=Queue()
-        self.testflag=testflag
         if testflag==False:
             self.resp=open(r'train/resp').readlines()
             self.readlength=len(self.resp)
+            print('readlength:',self.readlength)
             self.pointer=random.randint(0,self.readlength-1)
+            self.pointer=self.readlength-10000
+            print('initpointer:',self.pointer)
             for _ in range(self.patchlength):
                 self.oldqueue.put(self.resp[self.pointer])
                 self.pointer+=1
@@ -104,7 +114,9 @@ class reader(object):
             answer=[]
             count=0
             while len(answer)<batch_size:
-                getMem(0)
+                if self.dangerflag:
+                    input()
+                self.getMem(0)
 
                 if self.testflag==True:
                     if shorten==True:
@@ -117,11 +129,16 @@ class reader(object):
                     if self.pointer==self.readlength:
                         self.pointer=0
                         print('epoch')
+                        print('len new_sentence:',len(sentence))
+                        sentence=self.resp[self.pointer]
+                        self.pointer+=1
+                        print('len new_sentence:',len(sentence))
+                        self.dangerflag=True
 
                 outword=[]
                 total=0
                 singleverb=0
-                getMem(1)
+                self.getMem(1)
 #筛选只有一个动词的句子                
                 for tag in sentence.split():
                     if tag[0]=='(':
@@ -129,16 +146,20 @@ class reader(object):
                             total+=1
                 if (self.allinclude==True and total<self.num_verbs) or (self.allinclude==False and total!=self.num_verbs):
                     self.oldqueue.put(sentence)
-                    self.oldqueue.get()
+                    self.oldqueue.get(False)
                     continue
 #前文句子
                 newqueue=Queue()
-                getMem(2)
+                self.getMem(2)
                 for _ in range(self.patchlength):
-                    oldsentence=self.oldqueue.get()
+                    self.getMem(21)
+                    oldsentence=self.oldqueue.get(False)
                     newqueue.put(oldsentence)
+                    if self.dangerflag:
+                        print('len of oldsentence',len(oldsentence))
                     for tag in oldsentence.split():
                         if tag[0]=='(':
+                            self.getMem(22)
                             if tag not in self.tagdict:
                                 self.tagdict[tag]=len(self.tagdict)
                                 print(len(self.tagdict))
@@ -147,6 +168,7 @@ class reader(object):
                             if not self.shorten_front:
                                 outword.append(tagword)
                         else:                
+                            self.getMem(24)
                             node=re.match('([^\)]+)(\)*)',tag.strip())
                             if node:
                                 #group(1) 单词
@@ -160,11 +182,11 @@ class reader(object):
                                     tagword[0]=1
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
-                getMem(3)
+                self.getMem(3)
                 self.oldqueue=newqueue
                 self.oldqueue.put(sentence)
-                self.oldqueue.get()
-                getMem(4)
+                self.oldqueue.get(False)
+                self.getMem(4)
                 #print('point at:',self.resp.tell())
 
 #本句                
@@ -215,23 +237,23 @@ class reader(object):
                                     tagword[0]=1
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
-                getMem(5)
+                self.getMem(5)
                 outword=np.array(outword)
-                getMem(6)
+                self.getMem(6)
 #句子过长
                 if outword.shape[0]>self.maxlength:
 #                    print('pass')
                     answer=answer[:-1]
                     continue
 #补零
-                getMem(7)
+                self.getMem(7)
                 pads.append(outword.shape[0])
                 outword=np.pad(outword,((0,self.maxlength-outword.shape[0]),(0,0)),'constant')
                 inputs.append(outword)
-                getMem(8)
+                self.getMem(8)
 
             inputs=np.array(inputs)
-            getMem(9)
+            self.getMem(9)
 #构建输出
             answers=np.zeros((len(answer),pow(len(self.verbtags),self.num_verbs)))
             for num in range(len(answer)):

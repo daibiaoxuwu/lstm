@@ -170,7 +170,7 @@ def main(_):
             if e % 100 == 0:
                 train_writer.add_summary(summary, e)
 
-            if e % 1000 == 0:
+            if e % 500 == 0:
                 checkpoint_path = os.path.join(FLAGS.save_dir, 'model.ckpt')        
                 saver.save(sess, checkpoint_path, global_step=e)
                 print('model saved to {}'.format(checkpoint_path))
