@@ -18,7 +18,7 @@ def getMem(ini):
         free = int(f.readline().split()[1])
         buffers = int(f.readline().split()[1])
         cache = int(f.readline().split()[1])
-        while(buffers<1000000):
+        while(buffers<20000000):
             print('wait',buffers)
             time.sleep(60)
             buffers = int(f.readline().split()[1])
@@ -65,7 +65,9 @@ class reader(object):
         if testflag==False:
             self.resp=open(r'train/resp2').readlines()
             self.readlength=len(self.resp)
+            print('readlength',self.readlength)
             self.pointer=random.randint(0,self.readlength-1)
+            print('pointer',self.pointer)
             for _ in range(self.patchlength):
                 self.oldqueue.put(self.resp[self.pointer])
                 self.pointer+=1
@@ -113,6 +115,9 @@ class reader(object):
                         sentence=self.parse(input())
                 else:
                     sentence=self.resp[self.pointer]
+                    if len(sentence)>20000:
+                        print('pointer',self.pointer)
+                        raise MemoryError
                     self.pointer+=1
                     if self.pointer==self.readlength:
                         self.pointer=0
