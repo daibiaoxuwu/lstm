@@ -28,10 +28,12 @@ maxlength=700                   #输入序列最大长度
 initial_training_rate=0.00005     #学习率
 training_iters = 10000000       #迭代次数
 batch_size=50                   #batch数量
-display_step = 1               #多少步输出一次结果
-saving_step=20                 #多少步保存一次
+display_step = 50               #多少步输出一次结果
+saving_step=500                 #多少步保存一次
 num_verbs=2                     #一次看两个动词
 allinclude=False                #只看刚好含有num_verbs个动词的句子
+
+time_verbose_flag=False         #测量输入和运行的时间比
 
 reader = importlib.import_module('reader')
 rnnmodel = importlib.import_module('rnnmodel')
@@ -158,9 +160,15 @@ with tf.Session(config=config) as session:
 #pads:batch内每句话的长度,形状为[batch_size]
 #answers:输入的答案,形状为[batch_size,vocab_size]
         inputs,pads,answers=data.list_tags(batch_size)
+        if time_verbose_flag==True:
+            print("read Elapsed time: ", elapsed(time.time() - start_time))
+            start_time=time.time()
 #运行一次
         _, acc, loss, onehot_pred, summary= session.run([model.optimizer, model.accuracy, model.cost, model.pred, merged], \
                                                 feed_dict={model.x: inputs, model.y: answers, model.p:pads})
+        if time_verbose_flag==True:
+            print("run Elapsed time: ", elapsed(time.time() - start_time))
+            start_time=time.time()
 #累加计算平均正确率
         loss_total += loss
         acc_total += acc
