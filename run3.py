@@ -27,11 +27,11 @@ tf.flags.DEFINE_float('learning_rate', 0.0002, 'learning rate')
 tf.flags.DEFINE_string('train_file', 'rt_train.txt', 'train raw file')
 tf.flags.DEFINE_string('test_file', 'rt_test.txt', 'train raw file')
 tf.flags.DEFINE_string('data_dir', 'data', 'data directory')
-tf.flags.DEFINE_string('save_dir', 'ckpt/runattn', 'model saved directory')
+tf.flags.DEFINE_string('save_dir', 'ckpt/runattn2', 'model saved directory')
 tf.flags.DEFINE_string('log_dir', 'log/runattn', 'log info directiory')
 tf.flags.DEFINE_string('pre_trained_vec', None, 'using pre trained word embeddings, npy file format')
-#tf.flags.DEFINE_string('init_from', 'save', 'continue training from saved model at this path')
 tf.flags.DEFINE_string('init_from', None, 'continue training from saved model at this path')
+#tf.flags.DEFINE_string('init_from', 'ckpt/runattn', 'continue training from saved model at this path')
 #tf.flags.DEFINE_integer('save_steps', 1000, 'num of train steps for saving model')
 tf.flags.DEFINE_integer('vocab_size', 1000, 'num of train steps for saving model')
 tf.flags.DEFINE_integer('n_classes', 6, 'num of train steps for saving model')
@@ -43,7 +43,7 @@ FLAGS = tf.flags.FLAGS
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 embedding_size=100
 patchlength=3
-num_verbs=1
+num_verbs=2
 
 maxlength=200
 #maxlength=15
@@ -105,6 +105,7 @@ def main(_):
         FLAGS.vocab_size = embeddings.shape[0]
         FLAGS.embedding_size = embeddings.shape[1]
 
+
     if FLAGS.init_from is not None:
         assert os.path.isdir(FLAGS.init_from), '{} must be a directory'.format(FLAGS.init_from)
         ckpt = tf.train.get_checkpoint_state(FLAGS.init_from)
@@ -114,7 +115,7 @@ def main(_):
     # Define specified Model
     model = BiRNN(embedding_size=FLAGS.embedding_size, rnn_size=FLAGS.rnn_size, layer_size=FLAGS.layer_size,    
         vocab_size=FLAGS.vocab_size, attn_size=FLAGS.attn_size, sequence_length=maxlength,
-        n_classes=FLAGS.n_classes, grad_clip=FLAGS.grad_clip, learning_rate=FLAGS.learning_rate)
+        n_classes=pow(FLAGS.n_classes,num_verbs), grad_clip=FLAGS.grad_clip, learning_rate=FLAGS.learning_rate)
 
     # define value for tensorboard
     tf.summary.scalar('train_loss', model.cost)
@@ -142,7 +143,7 @@ def main(_):
 
         # restore model
         if FLAGS.init_from is not None:
-            saver.restore(sess, 'ckpt/runattn/model.ckpt-348500')
+            saver.restore(sess, ckpt.model_checkpoint_path)
 
 
         sess.graph.finalize() 
