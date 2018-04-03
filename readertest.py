@@ -12,6 +12,7 @@ import json
 from queue import Queue
 #bug:shorten和shorten_front不一样的话,每一遍都得重新计算而不是直接从队列里拿出来!
 
+
 def getMem(ini):
     with open('/proc/meminfo') as f:
         total = int(f.readline().split()[1])

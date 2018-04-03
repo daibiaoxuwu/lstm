@@ -12,6 +12,7 @@ from elapsed import elapsed
 
 
 
+
 os.environ["CUDA_VISIBLE_DEVICES"]="0"#环境变量：使用第一块gpu
 logs_path = 'log/run'
 saving_path='ckpt/run/run.ckpt'
