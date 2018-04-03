@@ -69,7 +69,6 @@ class reader(object):
             print('readlength',self.readlength)
 #            self.pointer=random.randint(0,self.readlength-1)
             self.pointer=1621919
-            self.pointer=0
             print('pointer',self.pointer)
             for _ in range(self.patchlength):
                 self.oldqueue.put(self.resp[self.pointer])
@@ -125,6 +124,12 @@ class reader(object):
                     if self.pointer==self.readlength:
                         self.pointer=0
                         print('epoch')
+                    if self.pointer==1621918:
+                        with open('train/tagdict','wb') as f1:
+                            with open('train/ldict','wb') as f2:
+                                pickle.dump(self.tagdict,f1)
+                                pickle.dump(self.ldict,f2)
+                        return
 
                 outword=[]
                 total=0
@@ -232,24 +237,10 @@ class reader(object):
                     answer=answer[:-1]
                     continue
 #补零
-                getMem(7)
-                pads.append(outword.shape[0])
-                outword=np.pad(outword,((0,self.maxlength-outword.shape[0]),(0,0)),'constant')
-                inputs.append(outword)
-                getMem(8)
-
-            inputs=np.array(inputs)
-            getMem(9)
 #构建输出
-            answers=np.zeros((len(answer),pow(len(self.verbtags),self.num_verbs)))
-            for num in range(len(answer)):
-                answers[num][answer[num]]=1
 #用完整个输入,从头开始
 #continue the 'while True' loop
-            return inputs,pads,answers
 
 if __name__ == '__main__':
     model = reader()
-    for i in range(500000000):
-        model.list_tags(500)
-        print('i',i)
+    model.list_tags(5000000000000)

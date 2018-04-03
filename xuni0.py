@@ -1,8 +1,6 @@
 #-*- coding:utf-8 -*-
-#n51.py 
-#learning rate decay
-#patchlength 0 readfrom resp
-#add:saving session
+#xuni0.py 
+#only look at 'would have'
 
 import numpy as np
 import tensorflow as tf
@@ -30,8 +28,8 @@ tf.flags.DEFINE_string('data_dir', 'data', 'data directory')
 tf.flags.DEFINE_string('save_dir', 'ckpt/runattn', 'model saved directory')
 tf.flags.DEFINE_string('log_dir', 'log/runattn', 'log info directiory')
 tf.flags.DEFINE_string('pre_trained_vec', None, 'using pre trained word embeddings, npy file format')
-#tf.flags.DEFINE_string('init_from', 'save', 'continue training from saved model at this path')
 tf.flags.DEFINE_string('init_from', None, 'continue training from saved model at this path')
+#tf.flags.DEFINE_string('init_from', 'ckpt/runattn', 'continue training from saved model at this path')
 #tf.flags.DEFINE_integer('save_steps', 1000, 'num of train steps for saving model')
 tf.flags.DEFINE_integer('vocab_size', 1000, 'num of train steps for saving model')
 tf.flags.DEFINE_integer('n_classes', 6, 'num of train steps for saving model')
@@ -43,7 +41,7 @@ FLAGS = tf.flags.FLAGS
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 embedding_size=100
 patchlength=3
-num_verbs=1
+num_verbs=2
 
 maxlength=200
 #maxlength=15
@@ -142,7 +140,7 @@ def main(_):
 
         # restore model
         if FLAGS.init_from is not None:
-            saver.restore(sess, 'ckpt/runattn/model.ckpt-348500')
+            saver.restore(sess, ckpt.model_checkpoint_path)
 
 
         sess.graph.finalize() 
