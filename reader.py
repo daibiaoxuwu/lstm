@@ -31,7 +31,7 @@ class reader(object):
         params = {'properties' : r"{'annotators': 'tokenize,ssplit,pos,lemma,parse', 'outputFormat': 'json'}"}
         while True:
             try:
-                resp = requests.post(self.url, input(), params=params).text
+                resp = requests.post(self.url, input(':'), params=params).text
                 content=json.loads(resp)
                 return re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' '))
             except:
@@ -44,7 +44,8 @@ class reader(object):
                 allinclude=False,\
                 shorten=False,\
                 shorten_front=False,\
-                testflag=False):   #几句前文是否shorten #是否输出不带tag,只有单词的句子 
+                testflag=False,\
+                passnum=0):   #几句前文是否shorten #是否输出不带tag,只有单词的句子 
 
 #patchlength:每次输入前文额外的句子的数量.
 #maxlength:每句话的最大长度.(包括前文额外句子).超过该长度的句子会被丢弃.
@@ -57,6 +58,7 @@ class reader(object):
         self.embedding_size=embedding_size
         self.num_verbs=num_verbs
         self.allinclude=allinclude
+        self.passnum=passnum
         self.verbtags=['VB','VBZ','VBP','VBD','VBN','VBG'] #所有动词的tag
         self.model=word2vec.load('train/combine100.bin')   #加载词向量模型
         self.tagdict={')':0}
@@ -77,15 +79,18 @@ class reader(object):
         else:
             for _ in range(self.patchlength):
                 if shorten_front==True:
-                    self.oldqueue.put(input())
+                    self.oldqueue.put(input(':'))
                 else:
-                    self.oldqueue.put(self.parse(input()))
+                    self.oldqueue.put(self.parse(input(':')))
 
 #加载文字
 
 #加载原型词典(把动词变为它的原型)
-        with open('train/lemma2', 'rb') as f:
+        with open('train/ldict', 'rb') as f:
             self.ldict = pickle.load(f)
+        with open('train/tagdict', 'rb') as f:
+            self.tagdict = pickle.load(f)
+        
         print('loaded lemma')
 
 
@@ -113,9 +118,9 @@ class reader(object):
 
                 if self.testflag==True:
                     if shorten==True:
-                        sentence=input()
+                        sentence=input(':')
                     else:
-                        sentence=self.parse(input())
+                        sentence=self.parse(input(':'))
                 else:
                     sentence=self.resp[self.pointer]
                     if len(sentence)>20000:
@@ -135,7 +140,7 @@ class reader(object):
                     if tag[0]=='(':
                         if tag[1:] in self.verbtags:
                             total+=1
-                if (self.allinclude==True and total<self.num_verbs) or (self.allinclude==False and total!=self.num_verbs):
+                if (self.allinclude==True and total<self.num_verbs+self.passnum) or (self.allinclude==False and total!=self.num_verbs+self.passnum):
                     self.oldqueue.put(sentence)
                     self.oldqueue.get()
                     continue
@@ -184,10 +189,10 @@ class reader(object):
                         else:
                             mdflag=0
                             if tag[1:] in self.verbtags:
-                                if singleverb==0:
+                                if singleverb==self.passnum:
                                     answer.append(self.verbtags.index(tag[1:]))
                                     singleverb=1
-                                elif singleverb<self.num_verbs:
+                                elif singleverb>self.passnum and singleverb<self.num_verbs+self.passnum:
                                     answer[-1]*=len(self.verbtags)
                                     answer[-1]+=self.verbtags.index(tag[1:])
                                     singleverb+=1

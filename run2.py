@@ -23,7 +23,7 @@ tf.flags.DEFINE_integer('batch_size', 128, 'Batch Size (default : 32)')
 tf.flags.DEFINE_integer('attn_size', 256, 'attention layer size')
 tf.flags.DEFINE_float('grad_clip', 5.0, 'clip gradients at this value')
 tf.flags.DEFINE_integer("num_epochs", 300, 'Number of training epochs (default: 200)')
-tf.flags.DEFINE_float('learning_rate', 0.0002, 'learning rate')
+tf.flags.DEFINE_float('learning_rate', 0.0001, 'learning rate')
 tf.flags.DEFINE_string('train_file', 'rt_train.txt', 'train raw file')
 tf.flags.DEFINE_string('test_file', 'rt_test.txt', 'train raw file')
 tf.flags.DEFINE_string('data_dir', 'data', 'data directory')
@@ -31,7 +31,7 @@ tf.flags.DEFINE_string('save_dir', 'ckpt/runattn', 'model saved directory')
 tf.flags.DEFINE_string('log_dir', 'log/runattn', 'log info directiory')
 tf.flags.DEFINE_string('pre_trained_vec', None, 'using pre trained word embeddings, npy file format')
 #tf.flags.DEFINE_string('init_from', 'save', 'continue training from saved model at this path')
-tf.flags.DEFINE_string('init_from', None, 'continue training from saved model at this path')
+tf.flags.DEFINE_string('init_from', 'ckpt/runattn', 'continue training from saved model at this path')
 #tf.flags.DEFINE_integer('save_steps', 1000, 'num of train steps for saving model')
 tf.flags.DEFINE_integer('vocab_size', 1000, 'num of train steps for saving model')
 tf.flags.DEFINE_integer('n_classes', 6, 'num of train steps for saving model')
@@ -40,7 +40,7 @@ tf.flags.DEFINE_integer('num_batches', 1000000, 'num of train steps for saving m
 FLAGS = tf.flags.FLAGS
 #FLAGS._parse_flags()
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 embedding_size=100
 patchlength=3
 num_verbs=1
@@ -142,7 +142,7 @@ def main(_):
 
         # restore model
         if FLAGS.init_from is not None:
-            saver.restore(sess, 'ckpt/runattn/model.ckpt-348500')
+            saver.restore(sess, ckpt.model_checkpoint_path)
 
 
         sess.graph.finalize() 
@@ -150,21 +150,24 @@ def main(_):
 
 
         print('start')
+        total_loss=0
+        total_acc=0
         for e in range(FLAGS.num_batches):
-            total_loss=0
             inputs,pads,answers = data.list_tags(FLAGS.batch_size)
             getMem(0)
             feed = {model.input_data:inputs, model.targets:answers, model.output_keep_prob:FLAGS.dropout_keep_prob,model.pad:pads}
             getMem(1)
             train_loss,acc, summary,  _ = sess.run([model.cost,model.accuracy, merged, model.train_op], feed_dict=feed)
             total_loss+=train_loss
+            total_acc+=acc
 
 
             
             if e % 100 == 0:
-                print('{}/{} , train_loss = {:.3f}, time/batch = {:.3f}'.format(e, FLAGS.num_batches,  total_loss/20, time.time()-start))
+                print('{}/{} , train_loss = {}, accuracy= {}, time/batch = {}'.format(e, FLAGS.num_batches,  total_loss/100, total_acc/100, time.time()-start))
                 start = time.time()
                 total_loss=0
+                total_acc=0
 
 
             if e % 100 == 0:

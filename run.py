@@ -32,6 +32,7 @@ display_step = 50               #多少步输出一次结果
 saving_step=500                 #多少步保存一次
 num_verbs=2                     #一次看两个动词
 allinclude=False                #只看刚好含有num_verbs个动词的句子
+passnum=0
 
 time_verbose_flag=False         #测量输入和运行的时间比
 
@@ -45,7 +46,7 @@ shorten=False
 shorten_front=False
 testflag=False
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:ais:oSt")
+    opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:ais:oStP:")
 except getopt.GetoptError:
     print('使用不正确.详见python run.py -h')
     sys.exit()
@@ -64,6 +65,7 @@ run.py  -g 使用gpu号(0,1) 默认:0
         -i allinclude 默认为读入时只读入含有num_verbs个动词的句子, 设置后读入所有含有不少于num_verbs的句子
         -o 是否从上次的模型加载
         -S shorten=True shorten_front=True
+        -P 读入时跳过几个
         -t test
         ''')
         sys.exit()
@@ -96,6 +98,8 @@ run.py  -g 使用gpu号(0,1) 默认:0
         shorten_front=True
     elif opt=='-t':
         testflag=True
+    elif opt=='-t':
+        passnum=arg
 
 
 
@@ -120,7 +124,8 @@ data=reader.reader(patchlength=patchlength,\
             allinclude=False,\
             shorten=shorten,\
             shorten_front=shorten_front,\
-            testflag=testflag)
+            testflag=testflag,\
+            passnum=passnum)
 
 
 model=rnnmodel.rnnmodel(vocab_single=6,\
