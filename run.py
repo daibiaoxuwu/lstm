@@ -37,7 +37,7 @@ passnum=0
 
 time_verbose_flag=False         #测量输入和运行的时间比
 
-reader = importlib.import_module('readertest')
+reader = importlib.import_module('reader')
 rnnmodel = importlib.import_module('rnnmodel')
 
 
