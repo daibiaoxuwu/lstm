@@ -46,8 +46,9 @@ loadold=False
 shorten=False
 shorten_front=False
 testflag=False
+multiflag=1
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:ais:oStP:")
+    opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:ais:oStP:T:")
 except getopt.GetoptError:
     print('使用不正确.详见python run.py -h')
     sys.exit()
@@ -101,10 +102,16 @@ run.py  -g 使用gpu号(0,1) 默认:0
         batch_size=1
         saving_step=100000000000
 
-        reader = importlib.import_module('readertest')
 #        config.device_count={'gpu':0}#使用cpu
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
         testflag=True
+    elif opt=='-T':
+        batch_size=1
+        saving_step=100000000000
+
+#        config.device_count={'gpu':0}#使用cpu
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+        multiflag=int(arg)
     elif opt=='-P':
         passnum=int(arg)
 
