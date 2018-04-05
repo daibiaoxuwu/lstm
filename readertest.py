@@ -4,6 +4,7 @@
 import numpy as np
 import word2vec
 import re
+import time
 import os
 import pickle
 import random
@@ -11,7 +12,6 @@ import requests
 import json
 from queue import Queue
 #bug:shorten和shorten_front不一样的话,每一遍都得重新计算而不是直接从队列里拿出来!
-
 
 def getMem(ini):
     with open('/proc/meminfo') as f:
@@ -27,18 +27,19 @@ def getMem(ini):
 
 class reader(object):
     def printtag(self,number):
-        return [k for k, v in self.tagdict.items() if v == number][0]
+#        return [k for k, v in self.verbtags.items() if v == number][0]
+        return self.verbtags[number]
     def parse(self,text):
-        if(text=='\n'):
+        if(text==''):
             raise NameError
-        url = 'http://127.0.0.1:9000'
+        url = 'http://166.111.139.15:9000'
         params = {'properties' : r"{'annotators': 'tokenize,ssplit,pos,lemma,parse', 'outputFormat': 'json'}"}
         while True:
             try:
-                resp = requests.post(url, input('type sentence:'), params=params).text
+                resp = requests.post(url, text, params=params).text
                 content=json.loads(resp)
                 return re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' '))
-            except:
+            except ConnectionRefusedError:
                 print('error, retrying...')
     def __init__(self,\
                 patchlength=3,\
@@ -48,11 +49,13 @@ class reader(object):
                 allinclude=False,\
                 shorten=False,\
                 shorten_front=False,\
-                testflag=False):   #几句前文是否shorten #是否输出不带tag,只有单词的句子 
+                testflag=False,\
+                passnum=0):   #几句前文是否shorten #是否输出不带tag,只有单词的句子 
 
 #patchlength:每次输入前文额外的句子的数量.
 #maxlength:每句话的最大长度.(包括前文额外句子).超过该长度的句子会被丢弃.
 #embedding_size:词向量维度数.
+        self.url = 'http://166.111.139.15:9000'
         self.shorten=shorten
         self.shorten_front=shorten_front   #几句前文是否shorten #是否输出不带tag,只有单词的句子 
         self.patchlength=patchlength
@@ -60,46 +63,55 @@ class reader(object):
         self.embedding_size=embedding_size
         self.num_verbs=num_verbs
         self.allinclude=allinclude
+        self.passnum=passnum
+        print('pas',passnum)
         self.verbtags=['VB','VBZ','VBP','VBD','VBN','VBG'] #所有动词的tag
         self.model=word2vec.load('train/combine100.bin')   #加载词向量模型
-        self.tagdict={')':0}
         print('loaded model')
         self.oldqueue=Queue()
         self.testflag=testflag
         if testflag==False:
-            self.resp=open(r'train/resp').readlines()
+            self.resp=open(r'train/resp2').readlines()
             self.readlength=len(self.resp)
-            self.pointer=random.randint(0,self.readlength-1)
+            print('readlength',self.readlength)
+#            self.pointer=random.randint(0,self.readlength-1)
+            self.pointer=1621919
+            self.pointer=0
+            print('pointer',self.pointer)
             for _ in range(self.patchlength):
                 self.oldqueue.put(self.resp[self.pointer])
                 self.pointer+=1
         else:
             for _ in range(self.patchlength):
                 if shorten_front==True:
-                    self.oldqueue.put(input('type sentence:'))
+                    self.oldqueue.put(input('0:type sentence:'))
                 else:
-                    self.oldqueue.put(self.parse(input('type sentence:')))
+                    self.oldqueue.put(self.parse(input('0:type sentence:')))
 
 #加载文字
 
 #加载原型词典(把动词变为它的原型)
-        with open('train/lemma2', 'rb') as f:
+        with open('train/ldict', 'rb') as f:
             self.ldict = pickle.load(f)
+        with open('train/tagdict', 'rb') as f:
+            self.tagdict = pickle.load(f)
+        
         print('loaded lemma')
-    def lemma(self,verb):
-        url = 'http://127.0.0.1:9000'
-        params = {'properties' : r"{'annotators': 'lemma', 'outputFormat': 'json'}"}
-        resp = requests.post(url, verb, params=params).text
-        content=json.loads(resp)
-        return content['sentences'][0]['tokens'][0]['lemma']
-    '''
+
+
+
     def lemma(self,verb):
         if verb in self.ldict:
             return self.ldict[verb]
         else:
-            print('errverb:',verb)
-            return verb
-    '''
+            params = {'properties' : r"{'annotators': 'lemma', 'outputFormat': 'json'}"}
+            resp = requests.post(self.url, verb, params=params).text
+            content=json.loads(resp)
+            word=content['sentences'][0]['tokens'][0]['lemma']
+            self.ldict[verb]=word
+            print('errorverb: ',verb,word)
+            return word
+
     def list_tags(self,batch_size):
         while True:#防止读到末尾
             inputs=[]
@@ -111,11 +123,14 @@ class reader(object):
 
                 if self.testflag==True:
                     if self.shorten==True:
-                        sentence=input('type sentence:')
+                        sentence=input('1:')
                     else:
-                        sentence=self.parse(input('type sentence:'))
+                        sentence=self.parse(input('1:'))
                 else:
                     sentence=self.resp[self.pointer]
+                    if len(sentence)>20000:
+                        print('pointer',self.pointer)
+                        raise MemoryError
                     self.pointer+=1
                     #print(self.pointer)
                     if self.pointer==self.readlength:
@@ -130,8 +145,10 @@ class reader(object):
                 for tag in sentence.split():
                     if tag[0]=='(':
                         if tag[1:] in self.verbtags:
+                            if self.testflag==True:
+                                print(tag[1:])
                             total+=1
-                if (self.allinclude==True and total<self.num_verbs) or (self.allinclude==False and total!=self.num_verbs):
+                if (self.allinclude==True and total<(self.num_verbs+self.passnum)) or (self.allinclude==False and total!=(self.num_verbs+self.passnum)):
                     self.oldqueue.put(sentence)
                     self.oldqueue.get()
                     continue
@@ -180,13 +197,12 @@ class reader(object):
                         else:
                             mdflag=0
                             if tag[1:] in self.verbtags:
-                                if singleverb==0:
+                                if singleverb==self.passnum:
                                     answer.append(self.verbtags.index(tag[1:]))
-                                    singleverb=1
-                                elif singleverb<self.num_verbs:
+                                elif singleverb>self.passnum and singleverb<self.num_verbs+self.passnum:
                                     answer[-1]*=len(self.verbtags)
                                     answer[-1]+=self.verbtags.index(tag[1:])
-                                    singleverb+=1
+                                singleverb+=1
                                 tag='(VB'
                                 vbflag=1
                             else:
@@ -224,7 +240,6 @@ class reader(object):
                 getMem(6)
 #句子过长
                 if outword.shape[0]>self.maxlength:
-#                    print('pass')
                     answer=answer[:-1]
                     continue
 #补零

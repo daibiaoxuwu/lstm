@@ -13,7 +13,7 @@ from elapsed import elapsed
 
 
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"#环境变量：使用第一块gpu
+os.environ["CUDA_VISIBLE_DEVICES"]=""#环境变量：使用第一块gpu
 logs_path = 'log/run'
 saving_path='ckpt/run/run.ckpt'
 load_path='ckpt/run/'
@@ -33,8 +33,11 @@ display_step = 1               #多少步输出一次结果
 saving_step=20                 #多少步保存一次
 num_verbs=2                     #一次看两个动词
 allinclude=False                #只看刚好含有num_verbs个动词的句子
+passnum=0
 
-reader = importlib.import_module('reader')
+time_verbose_flag=False         #测量输入和运行的时间比
+
+reader = importlib.import_module('readertest')
 rnnmodel = importlib.import_module('rnnmodel')
 
 
@@ -44,7 +47,7 @@ shorten=False
 shorten_front=False
 testflag=False
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:ais:oSt")
+    opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:ais:oStP:")
 except getopt.GetoptError:
     print('使用不正确.详见python run.py -h')
     sys.exit()
@@ -63,6 +66,7 @@ run.py  -g 使用gpu号(0,1) 默认:0
         -i allinclude 默认为读入时只读入含有num_verbs个动词的句子, 设置后读入所有含有不少于num_verbs的句子
         -o 是否从上次的模型加载
         -S shorten=True shorten_front=True
+        -P 读入时跳过几个
         -t test
         ''')
         sys.exit()
@@ -95,7 +99,14 @@ run.py  -g 使用gpu号(0,1) 默认:0
         shorten_front=True
     elif opt=='-t':
         batch_size=1
+        saving_step=100000000000
+
+        reader = importlib.import_module('readertest')
+#        config.device_count={'gpu':0}#使用cpu
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
         testflag=True
+    elif opt=='-P':
+        passnum=int(arg)
 
 
 
@@ -120,7 +131,8 @@ data=reader.reader(patchlength=patchlength,\
             allinclude=False,\
             shorten=shorten,\
             shorten_front=shorten_front,\
-            testflag=testflag)
+            testflag=testflag,\
+            passnum=passnum)
 
 
 model=rnnmodel.rnnmodel(vocab_single=6,\
@@ -160,6 +172,7 @@ with tf.Session(config=config) as session:
 #pads:batch内每句话的长度,形状为[batch_size]
 #answers:输入的答案,形状为[batch_size,vocab_size]
         print('i')
+        print('b',batch_size)
         inputs,pads,answers=data.list_tags(batch_size)
         print('0')
 #运行一次
@@ -167,7 +180,10 @@ with tf.Session(config=config) as session:
                                                 feed_dict={model.x: inputs, model.y: answers, model.p:pads})
 #累加计算平均正确率
         if testflag==True:
-            print('pred:', reader.printtag(tf.argmax(self.pred).eval()))
+            print(pred)
+            print(tf.argmax(pred[0]).eval())
+            print(type(tf.argmax(pred[0]).eval()))
+            print('pred:', data.printtag(tf.argmax(pred[0]).eval()))
         else:
             loss_total += loss
             acc_total += acc

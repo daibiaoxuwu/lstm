@@ -26,6 +26,8 @@ def getMem(ini):
         return buffers
 
 class reader(object):
+    def printtag(self,number):
+        return [k for k, v in self.tagdict.items() if v == number][0]
     def parse(self,text):
         print('parse')
         params = {'properties' : r"{'annotators': 'tokenize,ssplit,pos,lemma,parse', 'outputFormat': 'json'}"}
@@ -61,7 +63,6 @@ class reader(object):
         self.passnum=passnum
         self.verbtags=['VB','VBZ','VBP','VBD','VBN','VBG'] #所有动词的tag
         self.model=word2vec.load('train/combine100.bin')   #加载词向量模型
-        self.tagdict={')':0}
         print('loaded model')
         self.oldqueue=Queue()
         self.testflag=testflag
@@ -117,7 +118,7 @@ class reader(object):
                 getMem(0)
 
                 if self.testflag==True:
-                    if shorten==True:
+                    if self.shorten==True:
                         sentence=input(':')
                     else:
                         sentence=self.parse(input(':'))

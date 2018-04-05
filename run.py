@@ -36,7 +36,7 @@ passnum=0
 
 time_verbose_flag=False         #测量输入和运行的时间比
 
-reader = importlib.import_module('reader')
+reader = importlib.import_module('readertest')
 rnnmodel = importlib.import_module('rnnmodel')
 
 
@@ -98,8 +98,8 @@ run.py  -g 使用gpu号(0,1) 默认:0
         shorten_front=True
     elif opt=='-t':
         testflag=True
-    elif opt=='-t':
-        passnum=arg
+    elif opt=='-P':
+        passnum=int(arg)
 
 
 
