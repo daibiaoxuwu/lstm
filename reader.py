@@ -19,7 +19,7 @@ def getMem(ini):
         free = int(f.readline().split()[1])
         buffers = int(f.readline().split()[1])
         cache = int(f.readline().split()[1])
-        while(buffers<20000000):
+        while(buffers<1000000):
             print('wait',buffers)
             time.sleep(60)
             buffers = int(f.readline().split()[1])
@@ -27,16 +27,19 @@ def getMem(ini):
 
 class reader(object):
     def printtag(self,number):
-        return [k for k, v in self.tagdict.items() if v == number][0]
+#        return [k for k, v in self.verbtags.items() if v == number][0]
+        return self.verbtags[number]
     def parse(self,text):
-        print('parse')
+        if(text==''):
+            raise NameError
+        url = 'http://166.111.139.15:9000'
         params = {'properties' : r"{'annotators': 'tokenize,ssplit,pos,lemma,parse', 'outputFormat': 'json'}"}
         while True:
             try:
-                resp = requests.post(self.url, input(':'), params=params).text
+                resp = requests.post(url, text, params=params).text
                 content=json.loads(resp)
                 return re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' '))
-            except:
+            except ConnectionRefusedError:
                 print('error, retrying...')
     def __init__(self,\
                 patchlength=3,\
@@ -61,6 +64,7 @@ class reader(object):
         self.num_verbs=num_verbs
         self.allinclude=allinclude
         self.passnum=passnum
+        print('pas',passnum)
         self.verbtags=['VB','VBZ','VBP','VBD','VBN','VBG'] #所有动词的tag
         self.model=word2vec.load('train/combine100.bin')   #加载词向量模型
         print('loaded model')
@@ -80,9 +84,9 @@ class reader(object):
         else:
             for _ in range(self.patchlength):
                 if shorten_front==True:
-                    self.oldqueue.put(input(':'))
+                    self.oldqueue.put(input('0:type sentence:'))
                 else:
-                    self.oldqueue.put(self.parse(input(':')))
+                    self.oldqueue.put(self.parse(input('0:type sentence:')))
 
 #加载文字
 
@@ -119,15 +123,16 @@ class reader(object):
 
                 if self.testflag==True:
                     if self.shorten==True:
-                        sentence=input(':')
+                        sentence=input('1:')
                     else:
-                        sentence=self.parse(input(':'))
+                        sentence=self.parse(input('1:'))
                 else:
                     sentence=self.resp[self.pointer]
                     if len(sentence)>20000:
                         print('pointer',self.pointer)
                         raise MemoryError
                     self.pointer+=1
+                    #print(self.pointer)
                     if self.pointer==self.readlength:
                         self.pointer=0
                         print('epoch')
@@ -140,8 +145,10 @@ class reader(object):
                 for tag in sentence.split():
                     if tag[0]=='(':
                         if tag[1:] in self.verbtags:
+                            if self.testflag==True:
+                                print(tag[1:])
                             total+=1
-                if (self.allinclude==True and total<self.num_verbs+self.passnum) or (self.allinclude==False and total!=self.num_verbs+self.passnum):
+                if (self.allinclude==True and total<(self.num_verbs+self.passnum)) or (self.allinclude==False and total!=(self.num_verbs+self.passnum)):
                     self.oldqueue.put(sentence)
                     self.oldqueue.get()
                     continue
@@ -192,11 +199,10 @@ class reader(object):
                             if tag[1:] in self.verbtags:
                                 if singleverb==self.passnum:
                                     answer.append(self.verbtags.index(tag[1:]))
-                                    singleverb=1
                                 elif singleverb>self.passnum and singleverb<self.num_verbs+self.passnum:
                                     answer[-1]*=len(self.verbtags)
                                     answer[-1]+=self.verbtags.index(tag[1:])
-                                    singleverb+=1
+                                singleverb+=1
                                 tag='(VB'
                                 vbflag=1
                             else:
@@ -234,7 +240,6 @@ class reader(object):
                 getMem(6)
 #句子过长
                 if outword.shape[0]>self.maxlength:
-#                    print('pass')
                     answer=answer[:-1]
                     continue
 #补零

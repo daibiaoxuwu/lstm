@@ -12,7 +12,8 @@ from elapsed import elapsed
 
 
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"#环境变量：使用第一块gpu
+
+os.environ["CUDA_VISIBLE_DEVICES"]=""#环境变量：使用第一块gpu
 logs_path = 'log/run'
 saving_path='ckpt/run/run.ckpt'
 load_path='ckpt/run/'
@@ -28,8 +29,8 @@ maxlength=700                   #输入序列最大长度
 initial_training_rate=0.00005     #学习率
 training_iters = 10000000       #迭代次数
 batch_size=50                   #batch数量
-display_step = 50               #多少步输出一次结果
-saving_step=500                 #多少步保存一次
+display_step = 1               #多少步输出一次结果
+saving_step=20                 #多少步保存一次
 num_verbs=2                     #一次看两个动词
 allinclude=False                #只看刚好含有num_verbs个动词的句子
 passnum=0
@@ -97,6 +98,12 @@ run.py  -g 使用gpu号(0,1) 默认:0
         shorten=True
         shorten_front=True
     elif opt=='-t':
+        batch_size=1
+        saving_step=100000000000
+
+        reader = importlib.import_module('readertest')
+#        config.device_count={'gpu':0}#使用cpu
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
         testflag=True
     elif opt=='-P':
         passnum=int(arg)
@@ -164,35 +171,38 @@ with tf.Session(config=config) as session:
 #inputs:batch_size个输入句子,形状为[batch_size, maxlength, embedding_size]
 #pads:batch内每句话的长度,形状为[batch_size]
 #answers:输入的答案,形状为[batch_size,vocab_size]
+        print('i')
+        print('b',batch_size)
         inputs,pads,answers=data.list_tags(batch_size)
-        if time_verbose_flag==True:
-            print("read Elapsed time: ", elapsed(time.time() - start_time))
-            start_time=time.time()
+        print('0')
 #运行一次
-        _, acc, loss, onehot_pred, summary= session.run([model.optimizer, model.accuracy, model.cost, model.pred, merged], \
+        _,pred, acc, loss, onehot_pred, summary= session.run([model.optimizer, model.pred, model.accuracy, model.cost, model.pred, merged], \
                                                 feed_dict={model.x: inputs, model.y: answers, model.p:pads})
-        if time_verbose_flag==True:
-            print("run Elapsed time: ", elapsed(time.time() - start_time))
-            start_time=time.time()
 #累加计算平均正确率
-        loss_total += loss
-        acc_total += acc
-        step += 1
+        if testflag==True:
+            print(pred)
+            print(tf.argmax(pred[0]).eval())
+            print(type(tf.argmax(pred[0]).eval()))
+            print('pred:', data.printtag(tf.argmax(pred[0]).eval()))
+        else:
+            loss_total += loss
+            acc_total += acc
+            step += 1
 #帮global_step(用来调节学习率指数下降的)加一
-        model.global_step += 1
-        #print(model.global_step.eval())
+            model.global_step += 1
+            #print(model.global_step.eval())
 #输出
-        if step % display_step == 0:
-            writer.add_summary(summary, step)
-            print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
-                  "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
-                  "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
-            start_time=time.time()
-            acc_total = 0
-            loss_total = 0
+            if step % display_step == 0:
+                writer.add_summary(summary, step)
+                print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
+                      "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
+                      "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
+                start_time=time.time()
+                acc_total = 0
+                loss_total = 0
 #保存
-        if step % saving_step ==0:
-            print('saved to: ', saver.save(session,saving_path,global_step=step))
+            if step % saving_step ==0:
+                print('saved to: ', saver.save(session,saving_path,global_step=step))
     print("Optimization Finished!")
     print("Run on command line.")
     print("\ttensorboard --logdir=%s" % (logs_path))
