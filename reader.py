@@ -19,6 +19,7 @@ def getMem(ini):
         free = int(f.readline().split()[1])
         buffers = int(f.readline().split()[1])
         cache = int(f.readline().split()[1])
+        #print('i',ini)
         while(buffers<1000000):
             print('wait',buffers)
             time.sleep(60)
@@ -119,12 +120,14 @@ class reader(object):
             answer=[]
             count=0
             while len(answer)<batch_size:
+                #print('batch_size',batch_size)
                 getMem(0)
 
                 if self.testflag==True:
                     if self.shorten==True:
                         sentence=input('1:')
                     else:
+                        #print('parsed!')
                         sentence=self.parse(input('1:'))
                 else:
                     sentence=self.resp[self.pointer]
@@ -148,9 +151,11 @@ class reader(object):
                             if self.testflag==True:
                                 print(tag[1:])
                             total+=1
+                #print(self.allinclude,self.num_verbs,self.passnum,total)
                 if (self.allinclude==True and total<(self.num_verbs+self.passnum)) or (self.allinclude==False and total!=(self.num_verbs+self.passnum)):
                     self.oldqueue.put(sentence)
                     self.oldqueue.get()
+                    #print('short')
                     continue
 #前文句子
                 newqueue=Queue()

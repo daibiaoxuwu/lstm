@@ -1,0 +1,2 @@
+model_checkpoint_path: "p3n1.ckpt-20"
+all_model_checkpoint_paths: "p3n1.ckpt-20"

@@ -15,8 +15,8 @@ from elapsed import elapsed
 
 os.environ["CUDA_VISIBLE_DEVICES"]=""#环境变量：使用第一块gpu
 logs_path = 'log/run'
-saving_path='ckpt/run/run.ckpt'
-load_path='ckpt/run/'
+saving_path='ckpt2/run/run.ckpt'
+load_path='ckpt2/run/'
 
 #神经网络的输入是一句只有一个动词的句子（以及其语法树），把动词变为原型，语法树的tag变为了VB。
 #并预测它的动词时态。如果它不为0，输入变为这句话以及他前面的patchlength句话。
@@ -26,11 +26,11 @@ load_path='ckpt/run/'
 patchlength=3                   #输入的前文句子的数量
 embedding_size=100              #词向量维度数量
 maxlength=700                   #输入序列最大长度
-initial_training_rate=0.00005     #学习率
+initial_training_rate=0.001     #学习率
 training_iters = 10000000       #迭代次数
 batch_size=50                   #batch数量
-display_step = 1               #多少步输出一次结果
-saving_step=20                 #多少步保存一次
+display_step = 20               #多少步输出一次结果
+saving_step=1000                  #多少步保存一次
 num_verbs=2                     #一次看两个动词
 allinclude=False                #只看刚好含有num_verbs个动词的句子
 passnum=0
@@ -46,7 +46,8 @@ loadold=False
 shorten=False
 shorten_front=False
 testflag=False
-multiflag=1
+multiflag=False
+multinum=1
 try:
     opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:ais:oStP:T:")
 except getopt.GetoptError:
@@ -63,7 +64,7 @@ run.py  -g 使用gpu号(0,1) 默认:0
         -r 读取模型(模型名,文件名去掉.py 默认:reader)
         -m rnn模型(模型名,文件名去掉.py 默认:rnnmodel)
         -a 存储的allow_growth(不填)(默认:不允许)
-        -s 保存用的标识,默认:run.log路径为log/run,保存路径为ckpt/run/run.ckpt
+        -s 保存用的标识,默认:run.log路径为log/run,保存路径为ckpt2/run/run.ckpt
         -i allinclude 默认为读入时只读入含有num_verbs个动词的句子, 设置后读入所有含有不少于num_verbs的句子
         -o 是否从上次的模型加载
         -S shorten=True shorten_front=True
@@ -89,8 +90,9 @@ run.py  -g 使用gpu号(0,1) 默认:0
         tf_config.gpu_options.allow_growth = True
     elif opt=="-s":
         logs_path = 'log/'+arg
-        saving_path='ckpt/'+arg+'/'+arg+'.ckpt'
-        load_path='ckpt/'+arg
+        saving_path='ckpt2/'+arg+'/'+arg+'.ckpt'
+        saving_path3='ckpt3/'+arg+'/'+arg+'.ckpt'
+        load_path='ckpt2/'+arg
     elif opt=="-i":
         allinclude=True
     elif opt=="-o":
@@ -99,6 +101,8 @@ run.py  -g 使用gpu号(0,1) 默认:0
         shorten=True
         shorten_front=True
     elif opt=='-t':
+        loadold=True
+        allinclude=True
         batch_size=1
         saving_step=100000000000
 
@@ -106,12 +110,17 @@ run.py  -g 使用gpu号(0,1) 默认:0
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
         testflag=True
     elif opt=='-T':
+        testflag=True
+        loadold=True
+        allinclude=True
         batch_size=1
         saving_step=100000000000
 
 #        config.device_count={'gpu':0}#使用cpu
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
-        multiflag=int(arg)
+        multiflag=True
+        multinum=int(arg)
+        training_iters=1
     elif opt=='-P':
         passnum=int(arg)
 
@@ -135,7 +144,7 @@ data=reader.reader(patchlength=patchlength,\
             maxlength=maxlength,\
             embedding_size=embedding_size,\
             num_verbs=num_verbs,\
-            allinclude=False,\
+            allinclude=allinclude,\
             shorten=shorten,\
             shorten_front=shorten_front,\
             testflag=testflag,\
@@ -160,56 +169,73 @@ tf.summary.scalar('accuracy', model.accuracy)
 merged = tf.summary.merge_all()
 
 # Launch the graph
+max_acc_total=0
 print('start session')
-with tf.Session(config=config) as session:
-    session.run(tf.global_variables_initializer())#初始化变量
-    if loadold:
-        ckpt = tf.train.get_checkpoint_state(load_path)
-        saver.restore(session, ckpt.model_checkpoint_path)  
-    step = 0
-    acc_total = 0
-    loss_total = 0
 
-    writer.add_graph(session.graph)
-    while step < training_iters:
+#multi-time test
+while True:
+    for multitime in range(multinum):
+        print('nut,',multitime)
+
+        with tf.Session(config=config) as session:
+            session.run(tf.global_variables_initializer())#初始化变量
+            if loadold:
+#reload the test model multiple times
+                    if multiflag==True:
+                        ckpt = tf.train.get_checkpoint_state('ckpt2/p'+str(multitime)+'n1')
+                        print('p'+str(multitime)+'n1')
+                    else:
+                        ckpt = tf.train.get_checkpoint_state(load_path)
+
+                    saver.restore(session, ckpt.model_checkpoint_path)
+            step = 1
+            acc_total = 0
+            loss_total = 0
+
+            writer.add_graph(session.graph)
+            while step < training_iters:
 #读入一个batch的数据
 #重用的话只要实现自己的reader.py就行.
 #输出:count:指针,指向读到文件的哪个位置
 #inputs:batch_size个输入句子,形状为[batch_size, maxlength, embedding_size]
 #pads:batch内每句话的长度,形状为[batch_size]
 #answers:输入的答案,形状为[batch_size,vocab_size]
-        print('i')
-        print('b',batch_size)
-        inputs,pads,answers=data.list_tags(batch_size)
-        print('0')
+                #print('i')
+                #print('b',batch_size)
+                if multitime==0:
+                    inputs,pads,answers=data.list_tags(batch_size)
 #运行一次
-        _,pred, acc, loss, onehot_pred, summary= session.run([model.optimizer, model.pred, model.accuracy, model.cost, model.pred, merged], \
-                                                feed_dict={model.x: inputs, model.y: answers, model.p:pads})
+                _,pred, acc, loss, onehot_pred, summary= session.run([model.optimizer, model.pred, model.accuracy, model.cost, model.pred, merged], \
+                                                        feed_dict={model.x: inputs, model.y: answers, model.p:pads})
 #累加计算平均正确率
-        if testflag==True:
-            print(pred)
-            print(tf.argmax(pred[0]).eval())
-            print(type(tf.argmax(pred[0]).eval()))
-            print('pred:', data.printtag(tf.argmax(pred[0]).eval()))
-        else:
-            loss_total += loss
-            acc_total += acc
-            step += 1
+                if testflag==True:
+                    #print(pred)
+                    #print(tf.argmax(pred[0]).eval())
+                    #print(type(tf.argmax(pred[0]).eval()))
+                    print('pred:', data.printtag(tf.argmax(pred[0]).eval()))
+                    step+=1
+                else:
+                    loss_total += loss
+                    acc_total += acc
+                    step += 1
 #帮global_step(用来调节学习率指数下降的)加一
-            model.global_step += 1
-            #print(model.global_step.eval())
+                    model.global_step += 1
+                    #print(model.global_step.eval())
 #输出
-            if step % display_step == 0:
-                writer.add_summary(summary, step)
-                print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
-                      "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
-                      "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
-                start_time=time.time()
-                acc_total = 0
-                loss_total = 0
+                    if step % display_step == 0:
+                        writer.add_summary(summary, step)
+                        print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
+                              "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
+                              "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
+                        if acc_total>max_acc_total:
+                            max_acc_total=acc_total
+                            print('saved to: ', saver.save(session,saving_path3,global_step=step))
+                        start_time=time.time()
+                        acc_total = 0
+                        loss_total = 0
 #保存
-            if step % saving_step ==0:
-                print('saved to: ', saver.save(session,saving_path,global_step=step))
-    print("Optimization Finished!")
-    print("Run on command line.")
-    print("\ttensorboard --logdir=%s" % (logs_path))
+                    if step % saving_step ==0:
+                        print('saved to: ', saver.save(session,saving_path,global_step=step))
+            print("Optimization Finished!")
+            print("Run on command line.")
+            print("\ttensorboard --logdir=%s" % (logs_path))
