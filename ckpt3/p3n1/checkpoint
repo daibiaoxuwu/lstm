@@ -1,2 +1,6 @@
-model_checkpoint_path: "p3n1.ckpt-20"
-all_model_checkpoint_paths: "p3n1.ckpt-20"
+model_checkpoint_path: "p3n1.ckpt-5420"
+all_model_checkpoint_paths: "../../ckpt2/p3n1/p3n1.ckpt-3000"
+all_model_checkpoint_paths: "../../ckpt2/p3n1/p3n1.ckpt-4000"
+all_model_checkpoint_paths: "../../ckpt2/p3n1/p3n1.ckpt-5000"
+all_model_checkpoint_paths: "p3n1.ckpt-5400"
+all_model_checkpoint_paths: "p3n1.ckpt-5420"
