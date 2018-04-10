@@ -1,0 +1,21 @@
+Designing cooling channels for the thermoplastic injection process is a very important step in mold design.
+A conformal cooling channel can significantly improve the efficiency and the quality of production in plastic injection molding.
+This paper introduces an approach to generate spiral channels for conformal cooling.
+The cooling channels designed by our algorithms has very simple connectivity and can achieve effective conformal cooling for the models with complex shapes.
+The axial curves of cooling channels are constructed on a free-form surface conformal to the mold surface.
+With the help of boundary-distance maps, algorithms are investigated to generate evenly distributed spiral curves on the surface.
+The cooling channels derived from these spiral curves are conformal to the plastic part and introduce nearly no reduction at the rate of coolant flow.
+Therefore, the channels are able to achieve uniform mold cooling.
+Moreover, by having simple connectivity, these spiral channels can be fabricated by copper duct bending instead of expensive selective laser sintering.
+Keywords: conformal cooling, spiral channels, free-form shape, boundary-distance map, injection molding.
+As a common manufacturing process, plastic injection molding has been widely used to fabricate a variety of products.
+During a plastic injection molding cycle, the plastic part and the mold must be cooled to room temperature so that the molded part can be solidified and with its shape maintained.
+A substantial portion of the total molding cycle  could be required for cooling.
+To improve the efficiency, cooling channels are usually integrated into the mold.
+In general, conventional cooling channels in simple shapes are fabricated by drilling straight-line holes.
+Without attaining the uniformity of surface temperature in a mold, the quality of plastic parts must be impaired by undesired defects, such as part warpage, sink mark, and differential shrinkage, etc.
+In addition, non-uniform cooling also increases the cooling time.
+The work presented in this paper is motivated by automating the design process of conformal cooling channels for products with free-form shapes.
+Recently, we presented an approach in  to automatically generate circuit-like conformal cooling channels.
+The approach starts from offsetting the mold surface into a working surface, upon which a centroidal Voronoi diagram is used to help generate the cooling circuits.
+

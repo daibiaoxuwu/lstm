@@ -26,7 +26,7 @@ load_path='ckpt2/run/'
 patchlength=3                   #输入的前文句子的数量
 embedding_size=100              #词向量维度数量
 maxlength=700                   #输入序列最大长度
-initial_training_rate=0.00001     #学习率
+initial_training_rate=0.0001     #学习率
 training_iters = 10000000       #迭代次数
 batch_size=50                   #batch数量
 display_step = 20               #多少步输出一次结果
@@ -75,7 +75,7 @@ run.py  -g 使用gpu号(0,1) 默认:0
     elif opt=="-g":
         os.environ["CUDA_VISIBLE_DEVICES"]=arg
     elif opt=="-l":
-        config.gpu_options.per_process_gpu_memory_fraction=0.4#占用40%显存
+        config.gpu_options.per_process_gpu_memory_fraction=0.45#占用45%显存
     elif opt=="-p":
         patchlength=int(arg)
     elif opt=="-x":
@@ -105,6 +105,7 @@ run.py  -g 使用gpu号(0,1) 默认:0
         allinclude=True
         batch_size=1
         saving_step=100000000000
+        display_step=10000000000
 
 #        config.device_count={'gpu':0}#使用cpu
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
@@ -115,12 +116,13 @@ run.py  -g 使用gpu号(0,1) 默认:0
         allinclude=True
         batch_size=1
         saving_step=100000000000
+        display_step=10000000000
 
 #        config.device_count={'gpu':0}#使用cpu
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
         multiflag=True
         multinum=int(arg)
-        training_iters=1
+        training_iters=2
     elif opt=='-P':
         passnum=int(arg)
 
@@ -174,7 +176,9 @@ print('start session')
 
 #multi-time test
 while True:
-    for multitime in range(multinum):
+    print('iter')
+    multitime=0
+    while True:
         print('nut,',multitime)
 
         with tf.Session(config=config) as session:
@@ -203,7 +207,10 @@ while True:
                 #print('i')
                 #print('b',batch_size)
                 if multitime==0:
-                    inputs,pads,answers=data.list_tags(batch_size)
+                    #print('listtags')
+
+                    inputs,pads,answers,singleverb=data.list_tags(batch_size)
+                    #print('sv',singleverb)
 #运行一次
                 _,pred, acc, loss, onehot_pred, summary= session.run([model.optimizer, model.pred, model.accuracy, model.cost, model.pred, merged], \
                                                         feed_dict={model.x: inputs, model.y: answers, model.p:pads})
@@ -227,7 +234,7 @@ while True:
                         print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
                               "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
                               "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
-                        if acc_total>max_acc_total:
+                        if testflag==False and acc_total>max_acc_total:
                             max_acc_total=acc_total
                             print('saved to: ', saver.save(session,saving_path3,global_step=step))
                         start_time=time.time()
@@ -236,6 +243,8 @@ while True:
 #保存
                     if step % saving_step ==0:
                         print('saved to: ', saver.save(session,saving_path,global_step=step))
-            print("Optimization Finished!")
-            print("Run on command line.")
-            print("\ttensorboard --logdir=%s" % (logs_path))
+            if testflag==True:
+                multitime+=1
+                if multitime>=singleverb:
+                    print('mts',multitime,singleverb)
+                    break

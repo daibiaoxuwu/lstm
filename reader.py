@@ -31,6 +31,7 @@ class reader(object):
 #        return [k for k, v in self.verbtags.items() if v == number][0]
         return self.verbtags[number]
     def parse(self,text):
+        print('start parse')
         if(text==''):
             raise NameError
         url = 'http://166.111.139.15:9000'
@@ -39,6 +40,7 @@ class reader(object):
             try:
                 resp = requests.post(url, text, params=params).text
                 content=json.loads(resp)
+                print('finish parse:',re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' ')))
                 return re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' '))
             except ConnectionRefusedError:
                 print('error, retrying...')
@@ -71,6 +73,8 @@ class reader(object):
         print('loaded model')
         self.oldqueue=Queue()
         self.testflag=testflag
+
+        self.testfile=open('input.txt')
         if testflag==False:
             self.resp=open(r'train/resp2').readlines()
             self.readlength=len(self.resp)
@@ -85,9 +89,11 @@ class reader(object):
         else:
             for _ in range(self.patchlength):
                 if shorten_front==True:
-                    self.oldqueue.put(input('0:type sentence:'))
+                    #self.oldqueue.put(input('0:type sentence:'))
+                    self.oldqueue.put(self.testfile.readline())
                 else:
-                    self.oldqueue.put(self.parse(input('0:type sentence:')))
+                    #self.oldqueue.put(self.parse(input('0:type sentence:')))
+                    self.oldqueue.put(self.parse(self.testfile.readline()))
 
 #加载文字
 
@@ -125,10 +131,12 @@ class reader(object):
 
                 if self.testflag==True:
                     if self.shorten==True:
-                        sentence=input('1:')
+                        #sentence=input('1:')
+                        sentence=self.testfile.readline()
                     else:
                         #print('parsed!')
-                        sentence=self.parse(input('1:'))
+                        #sentence=self.parse(input('1:'))
+                        sentence=self.parse(self.testfile.readline())
                 else:
                     sentence=self.resp[self.pointer]
                     if len(sentence)>20000:
@@ -262,7 +270,7 @@ class reader(object):
                 answers[num][answer[num]]=1
 #用完整个输入,从头开始
 #continue the 'while True' loop
-            return inputs,pads,answers
+            return inputs,pads,answers,singleverb
 
 if __name__ == '__main__':
     model = reader()
