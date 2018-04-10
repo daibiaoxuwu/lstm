@@ -75,7 +75,7 @@ run.py  -g 使用gpu号(0,1) 默认:0
     elif opt=="-g":
         os.environ["CUDA_VISIBLE_DEVICES"]=arg
     elif opt=="-l":
-        config.gpu_options.per_process_gpu_memory_fraction=0.4#占用40%显存
+        config.gpu_options.per_process_gpu_memory_fraction=0.45#占用45%显存
     elif opt=="-p":
         patchlength=int(arg)
     elif opt=="-x":
@@ -203,7 +203,7 @@ while True:
                 #print('i')
                 #print('b',batch_size)
                 if multitime==0:
-                    initial,inputs,pads,answers=data.list_tags(batch_size)
+                    initial,inputs,pads,answers,singleverb=data.list_tags(batch_size)
 #运行一次
                 _,pred, acc, loss, onehot_pred, summary= session.run([model.optimizer, model.pred, model.accuracy, model.cost, model.pred, merged], \
                                                         feed_dict={model.x: inputs, model.y: answers, model.p:pads})

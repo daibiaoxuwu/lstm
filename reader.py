@@ -276,4 +276,3 @@ if __name__ == '__main__':
     model = reader()
     for i in range(500000000):
         model.list_tags(500)
-        print('i',i)

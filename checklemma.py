@@ -31,6 +31,7 @@ class reader(object):
 #        return [k for k, v in self.verbtags.items() if v == number][0]
         return self.verbtags[number]
     def parse(self,text):
+        print('start parse')
         if(text==''):
             raise NameError
         url = 'http://166.111.139.15:9000'
@@ -39,15 +40,16 @@ class reader(object):
             try:
                 resp = requests.post(url, text, params=params).text
                 content=json.loads(resp)
+                print('finish parse:',re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' ')))
                 return re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' '))
             except ConnectionRefusedError:
                 print('error, retrying...')
     def __init__(self,\
-                patchlength=3,\
+                patchlength=0,\
                 maxlength=700,\
                 embedding_size=100,\
-                num_verbs=2,\
-                allinclude=False,\
+                num_verbs=1,\
+                allinclude=True,\
                 shorten=False,\
                 shorten_front=False,\
                 testflag=False,\
@@ -71,6 +73,8 @@ class reader(object):
         print('loaded model')
         self.oldqueue=Queue()
         self.testflag=testflag
+
+        self.testfile=open('input.txt')
         if testflag==False:
             self.resp=open(r'train/resp2').readlines()
             self.readlength=len(self.resp)
@@ -143,9 +147,9 @@ class reader(object):
                     if self.pointer==self.readlength:
                         self.pointer=0
                         print('epoch')
+                        input()
 
                 outword=[]
-                initial=''
                 total=0
                 singleverb=0
                 getMem(1)
@@ -230,8 +234,6 @@ class reader(object):
                             if node:
                                 if node.group(1) in self.model:
                                     if vbflag==1:
-                                        initial+=' ('+node.group(1)+')'
-                                        
 #去除时态
                                         node2=self.lemma(node.group(1))
                                         if node2 in self.model:
@@ -239,8 +241,8 @@ class reader(object):
                                         else:
                                             outword.append([0]*self.embedding_size)
                                     else:
-                                        initial+=' '+node.group(1)
-                                        outword.append(self.model[node.group(1)].tolist())
+                                        if node.group(1) in self.ldict:
+                                            print('errornoun',node.group(1),self.lemma(node.group(1)))
                                 else:
                                     outword.append([0]*self.embedding_size)
                                 if not self.shorten:
@@ -273,7 +275,8 @@ class reader(object):
             return inputs,pads,answers,singleverb
 
 if __name__ == '__main__':
-    model = reader()
+    model = reader(allinclude=True)
     for i in range(500000000):
-        model.list_tags(500)
-        print('i',i)
+        model.list_tags(50)
+        if i % 100==0:
+            print('i',i)
