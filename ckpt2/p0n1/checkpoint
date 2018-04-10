@@ -1,6 +1,0 @@
-model_checkpoint_path: "p0n1.ckpt-8000"
-all_model_checkpoint_paths: "../../ckpt3/p0n1/p0n1.ckpt-5000"
-all_model_checkpoint_paths: "p0n1.ckpt-5000"
-all_model_checkpoint_paths: "p0n1.ckpt-6000"
-all_model_checkpoint_paths: "p0n1.ckpt-7000"
-all_model_checkpoint_paths: "p0n1.ckpt-8000"
