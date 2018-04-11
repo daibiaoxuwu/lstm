@@ -217,24 +217,26 @@ while True:
                 else:
                     for i in range(len(pred)):
                         if tf.argmax(pred[i]).eval() != tf.argmax(answers[i]).eval():
-                            with open('out1.txt','w') as f:
-                                print('p',pred[i])
-                                print('a',answers[i])
-                                print('old:')
-                                print(oldsengroup[i][0].strip())
-                                print(oldsengroup[i][1].strip())
-                                print(oldsengroup[i][2].strip())
-                                print('new:')
-                                print(initial[i]+'\nwrong: '+data.printtag(tf.argmax(pred[i]).eval())+' right:'+data.printtag(tf.argmax(answers[i]).eval()))
-                            
-                                f.write('p'+str(pred[i]))
-                                f.write('a'+str(answers[i]))
-                                f.write('old:')
-                                f.write(oldsengroup[i][0].strip())
-                                f.write(oldsengroup[i][1].strip())
-                                f.write(oldsengroup[i][2].strip())
-                                f.write('new:')
-                                f.write(initial[i]+'\nwrong: '+data.printtag(tf.argmax(pred[i]).eval())+' right:'+data.printtag(tf.argmax(answers[i]).eval()))
+                            pred[i][tf.argmax(pred[i]).eval()]=-100
+                            if tf.argmax(pred[i]).eval() != tf.argmax(answers[i]).eval():
+                                with open('out2.txt','w') as f:
+                                    print('p',pred[i])
+                                    print('a',answers[i])
+                                    print('old:')
+                                    print(oldsengroup[i][0].strip())
+                                    print(oldsengroup[i][1].strip())
+                                    print(oldsengroup[i][2].strip())
+                                    print('new:')
+                                    print(initial[i]+'\nwrong: '+data.printtag(tf.argmax(pred[i]).eval())+' right:'+data.printtag(tf.argmax(answers[i]).eval()))
+                                
+                                    f.write('p'+str(pred[i]))
+                                    f.write('a'+str(answers[i]))
+                                    f.write('old:')
+                                    f.write(oldsengroup[i][0].strip())
+                                    f.write(oldsengroup[i][1].strip())
+                                    f.write(oldsengroup[i][2].strip())
+                                    f.write('new:')
+                                    f.write(initial[i]+'\nwrong: '+data.printtag(tf.argmax(pred[i]).eval())+' right:'+data.printtag(tf.argmax(answers[i]).eval()))
 
                     loss_total += loss
                     acc_total += acc
