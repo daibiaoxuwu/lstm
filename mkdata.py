@@ -19,6 +19,7 @@ class reader(object):
 #        return [k for k, v in self.verbtags.items() if v == number][0]
         return self.verbtags[number]
     def parse(self,text):
+        print('start parse')
         if(text==''):
             raise NameError
         url = 'http://166.111.139.15:9000'
@@ -27,6 +28,7 @@ class reader(object):
             try:
                 resp = requests.post(url, text, params=params).text
                 content=json.loads(resp)
+                print('finish parse:',re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' ')))
                 return re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' '))
             except ConnectionRefusedError:
                 print('error, retrying...')
@@ -59,13 +61,14 @@ class reader(object):
         print('loaded model')
         self.oldqueue=Queue()
         self.testflag=testflag
+
+        self.testfile=open('input.txt')
         if testflag==False:
             self.resp=open(r'train/resp2').readlines()
             self.readlength=len(self.resp)
             print('readlength',self.readlength)
-#            self.pointer=random.randint(0,self.readlength-1)
-            self.pointer=1621919
-            self.pointer=0
+            self.pointer=random.randint(0,self.readlength-1)
+#            self.pointer=1621919
             print('pointer',self.pointer)
             for _ in range(self.patchlength):
                 self.oldqueue.put(self.resp[self.pointer])
@@ -82,7 +85,7 @@ class reader(object):
 #加载文字
 
 #加载原型词典(把动词变为它的原型)
-        with open('train/ldict', 'rb') as f:
+        with open('train/ldict2', 'rb') as f:
             self.ldict = pickle.load(f)
         with open('train/tagdict', 'rb') as f:
             self.tagdict = pickle.load(f)
@@ -102,27 +105,9 @@ class reader(object):
             self.ldict[verb]=word
             print('errorverb: ',verb,word)
             return word
-    def clean(self,sentence):
-        initial=''
-        for tag in sentence.split():
-            if tag[0]=='(':
-                if tag[1:] in self.verbtags:
-                    vbflag=1
-                else:
-                    vbflag=0
-            else:
-                node=re.match('([^\)]+)(\)*)',tag.strip())
-                if node:
-                    if vbflag==1:
-                        initial+=' ('+node.group(1)+')'
-                    else:
-                        initial+=' '+node.group(1)
-        return initial
 
     def list_tags(self,batch_size):
         while True:#防止读到末尾
-            initials=[]
-            oldsengroup=[]
             inputs=[]
             pads=[]
             answer=[]
@@ -167,10 +152,8 @@ class reader(object):
                     continue
 #前文句子
                 newqueue=Queue()
-                newmem=[]
                 for _ in range(self.patchlength):
                     oldsentence=self.oldqueue.get()
-                    newmem.append(self.clean(oldsentence))
                     newqueue.put(oldsentence)
                     for tag in oldsentence.split():
                         if tag[0]=='(':
@@ -195,7 +178,6 @@ class reader(object):
                                     tagword[0]=1
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
-                oldsengroup.append(newmem)
                 self.oldqueue=newqueue
                 self.oldqueue.put(sentence)
                 self.oldqueue.get()
@@ -233,7 +215,6 @@ class reader(object):
                             if node:
                                 if node.group(1) in self.model:
                                     if vbflag==1:
-                                        
 #去除时态
                                         node2=self.lemma(node.group(1))
                                         if node2 in self.model:
@@ -250,7 +231,6 @@ class reader(object):
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
                 outword=np.array(outword)
-                initials.append(self.clean(sentence))
 #句子过长
                 if outword.shape[0]>self.maxlength:
                     answer=answer[:-1]
@@ -267,10 +247,9 @@ class reader(object):
                 answers[num][answer[num]]=1
 #用完整个输入,从头开始
 #continue the 'while True' loop
-            return initials,inputs,pads,answers,singleverb,oldsengroup
+            return inputs,pads,answers,singleverb
 
 if __name__ == '__main__':
     model = reader()
     for i in range(500000000):
         model.list_tags(500)
-        print('i',i)

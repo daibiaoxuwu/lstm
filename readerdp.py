@@ -19,6 +19,7 @@ class reader(object):
 #        return [k for k, v in self.verbtags.items() if v == number][0]
         return self.verbtags[number]
     def parse(self,text):
+        print('start parse')
         if(text==''):
             raise NameError
         url = 'http://166.111.139.15:9000'
@@ -27,9 +28,43 @@ class reader(object):
             try:
                 resp = requests.post(url, text, params=params).text
                 content=json.loads(resp)
+                print('finish parse:',re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' ')))
                 return re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' '))
             except ConnectionRefusedError:
                 print('error, retrying...')
+    def clean(self,sentence):
+        initial=''
+        for tag in sentence.split():
+            if tag[0]=='(':
+                if tag[1:] in self.verbtags:
+                    vbflag=1
+                else:
+                    vbflag=0
+            else:
+                node=re.match('([^\)]+)(\)*)',tag.strip())
+                if node:
+                    if vbflag==1:
+                        initial+=' ('+node.group(1)+')'
+                    else:
+                        initial+=' '+node.group(1)
+        return initial
+    def work(self,a):
+        url = 'http://166.111.139.15:9000'
+        params = {'properties' : r"{'annotators': 'tokenize,ssplit,pos,lemma,parse,depparse', 'outputFormat': 'json'}"}
+        while True:
+            try:
+                resp = requests.post(url,a,params=params).text
+                break
+            except ConnectionRefusedError:
+                print('error, retrying...')
+        content=json.loads(resp)
+        for sentence in content['sentences']:
+            for i in sentence['enhancedPlusPlusDependencies']:
+                if 'nsubjpass' in i.values():
+                    return 1
+        return 0
+        
+
     def __init__(self,\
                 patchlength=3,\
                 maxlength=700,\
@@ -59,13 +94,14 @@ class reader(object):
         print('loaded model')
         self.oldqueue=Queue()
         self.testflag=testflag
+
+        self.testfile=open('input.txt')
         if testflag==False:
             self.resp=open(r'train/resp2').readlines()
             self.readlength=len(self.resp)
             print('readlength',self.readlength)
-#            self.pointer=random.randint(0,self.readlength-1)
-            self.pointer=1621919
-            self.pointer=0
+            self.pointer=random.randint(0,self.readlength-1)
+#            self.pointer=1621919
             print('pointer',self.pointer)
             for _ in range(self.patchlength):
                 self.oldqueue.put(self.resp[self.pointer])
@@ -82,7 +118,7 @@ class reader(object):
 #加载文字
 
 #加载原型词典(把动词变为它的原型)
-        with open('train/ldict', 'rb') as f:
+        with open('train/ldict2', 'rb') as f:
             self.ldict = pickle.load(f)
         with open('train/tagdict', 'rb') as f:
             self.tagdict = pickle.load(f)
@@ -102,27 +138,9 @@ class reader(object):
             self.ldict[verb]=word
             print('errorverb: ',verb,word)
             return word
-    def clean(self,sentence):
-        initial=''
-        for tag in sentence.split():
-            if tag[0]=='(':
-                if tag[1:] in self.verbtags:
-                    vbflag=1
-                else:
-                    vbflag=0
-            else:
-                node=re.match('([^\)]+)(\)*)',tag.strip())
-                if node:
-                    if vbflag==1:
-                        initial+=' ('+node.group(1)+')'
-                    else:
-                        initial+=' '+node.group(1)
-        return initial
 
     def list_tags(self,batch_size):
         while True:#防止读到末尾
-            initials=[]
-            oldsengroup=[]
             inputs=[]
             pads=[]
             answer=[]
@@ -151,26 +169,10 @@ class reader(object):
 
                 outword=[]
                 total=0
-                singleverb=0
-#筛选只有一个动词的句子                
-                for tag in sentence.split():
-                    if tag[0]=='(':
-                        if tag[1:] in self.verbtags:
-                            if self.testflag==True:
-                                print(tag[1:])
-                            total+=1
-                #print(self.allinclude,self.num_verbs,self.passnum,total)
-                if (self.allinclude==True and total<(self.num_verbs+self.passnum)) or (self.allinclude==False and total!=(self.num_verbs+self.passnum)):
-                    self.oldqueue.put(sentence)
-                    self.oldqueue.get()
-                    #print('short')
-                    continue
 #前文句子
                 newqueue=Queue()
-                newmem=[]
                 for _ in range(self.patchlength):
                     oldsentence=self.oldqueue.get()
-                    newmem.append(self.clean(oldsentence))
                     newqueue.put(oldsentence)
                     for tag in oldsentence.split():
                         if tag[0]=='(':
@@ -195,7 +197,6 @@ class reader(object):
                                     tagword[0]=1
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
-                oldsengroup.append(newmem)
                 self.oldqueue=newqueue
                 self.oldqueue.put(sentence)
                 self.oldqueue.get()
@@ -210,12 +211,6 @@ class reader(object):
                         else:
                             mdflag=0
                             if tag[1:] in self.verbtags:
-                                if singleverb==self.passnum:
-                                    answer.append(self.verbtags.index(tag[1:]))
-                                elif singleverb>self.passnum and singleverb<self.num_verbs+self.passnum:
-                                    answer[-1]*=len(self.verbtags)
-                                    answer[-1]+=self.verbtags.index(tag[1:])
-                                singleverb+=1
                                 tag='(VB'
                                 vbflag=1
                             else:
@@ -233,11 +228,12 @@ class reader(object):
                             if node:
                                 if node.group(1) in self.model:
                                     if vbflag==1:
-                                        
 #去除时态
                                         node2=self.lemma(node.group(1))
                                         if node2 in self.model:
-                                            outword.append(self.model[node2].tolist())
+                                            if not (node2=='is' or node2=='have'):#去除is,have
+
+                                                outword.append(self.model[node2].tolist())
                                         else:
                                             outword.append([0]*self.embedding_size)
                                     else:
@@ -250,11 +246,12 @@ class reader(object):
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
                 outword=np.array(outword)
-                initials.append(self.clean(sentence))
 #句子过长
                 if outword.shape[0]>self.maxlength:
-                    answer=answer[:-1]
                     continue
+                temp=[0,0]
+                temp[self.work(self.clean(sentence))]=1
+                answer.append(temp)
 #补零
                 pads.append(outword.shape[0])
                 outword=np.pad(outword,((0,self.maxlength-outword.shape[0]),(0,0)),'constant')
@@ -262,15 +259,11 @@ class reader(object):
 
             inputs=np.array(inputs)
 #构建输出
-            answers=np.zeros((len(answer),pow(len(self.verbtags),self.num_verbs)))
-            for num in range(len(answer)):
-                answers[num][answer[num]]=1
 #用完整个输入,从头开始
 #continue the 'while True' loop
-            return initials,inputs,pads,answers,singleverb,oldsengroup
+            return inputs,pads,answer
 
 if __name__ == '__main__':
     model = reader()
-    for i in range(500000000):
-        model.list_tags(500)
-        print('i',i)
+    for i in range(2):
+        model.list_tags(1)

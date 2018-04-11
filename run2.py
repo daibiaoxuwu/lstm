@@ -18,7 +18,7 @@ tf.flags.DEFINE_integer('rnn_size', 20, 'hidden units of RNN , as well as dimens
 #tf.flags.DEFINE_integer('rnn_size', 100, 'hidden units of RNN , as well as dimensionality of character embedding (default: 100)')
 tf.flags.DEFINE_float('dropout_keep_prob', 0.5, 'Dropout keep probability (default : 0.5)')#too high?
 tf.flags.DEFINE_integer('layer_size', 2, 'number of layers of RNN (default: 2)')
-tf.flags.DEFINE_integer('batch_size', 128, 'Batch Size (default : 32)')
+tf.flags.DEFINE_integer('batch_size', 50, 'Batch Size (default : 32)')
 #tf.flags.DEFINE_integer('sequence_length', 15, 'Sequence length (default : 32)')
 tf.flags.DEFINE_integer('attn_size', 256, 'attention layer size')
 tf.flags.DEFINE_float('grad_clip', 5.0, 'clip gradients at this value')
