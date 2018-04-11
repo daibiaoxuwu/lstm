@@ -13,18 +13,6 @@ import json
 from queue import Queue
 #bug:shorten和shorten_front不一样的话,每一遍都得重新计算而不是直接从队列里拿出来!
 
-def getMem(ini):
-    with open('/proc/meminfo') as f:
-        total = int(f.readline().split()[1])
-        free = int(f.readline().split()[1])
-        buffers = int(f.readline().split()[1])
-        cache = int(f.readline().split()[1])
-        #print('i',ini)
-        while(buffers<1000000):
-            print('wait',buffers)
-            time.sleep(60)
-            buffers = int(f.readline().split()[1])
-        return buffers
 
 class reader(object):
     def printtag(self,number):
@@ -79,9 +67,8 @@ class reader(object):
             self.resp=open(r'train/resp2').readlines()
             self.readlength=len(self.resp)
             print('readlength',self.readlength)
-#            self.pointer=random.randint(0,self.readlength-1)
-            self.pointer=1621919
-            self.pointer=0
+            self.pointer=random.randint(0,self.readlength-1)
+#            self.pointer=1621919
             print('pointer',self.pointer)
             for _ in range(self.patchlength):
                 self.oldqueue.put(self.resp[self.pointer])
@@ -98,7 +85,7 @@ class reader(object):
 #加载文字
 
 #加载原型词典(把动词变为它的原型)
-        with open('train/ldict', 'rb') as f:
+        with open('train/ldict2', 'rb') as f:
             self.ldict = pickle.load(f)
         with open('train/tagdict', 'rb') as f:
             self.tagdict = pickle.load(f)
@@ -127,7 +114,6 @@ class reader(object):
             count=0
             while len(answer)<batch_size:
                 #print('batch_size',batch_size)
-                getMem(0)
 
                 if self.testflag==True:
                     if self.shorten==True:
@@ -151,7 +137,6 @@ class reader(object):
                 outword=[]
                 total=0
                 singleverb=0
-                getMem(1)
 #筛选只有一个动词的句子                
                 for tag in sentence.split():
                     if tag[0]=='(':
@@ -167,7 +152,6 @@ class reader(object):
                     continue
 #前文句子
                 newqueue=Queue()
-                getMem(2)
                 for _ in range(self.patchlength):
                     oldsentence=self.oldqueue.get()
                     newqueue.put(oldsentence)
@@ -194,11 +178,9 @@ class reader(object):
                                     tagword[0]=1
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
-                getMem(3)
                 self.oldqueue=newqueue
                 self.oldqueue.put(sentence)
                 self.oldqueue.get()
-                getMem(4)
                 #print('point at:',self.resp.tell())
 
 #本句                
@@ -248,22 +230,17 @@ class reader(object):
                                     tagword[0]=1
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
-                getMem(5)
                 outword=np.array(outword)
-                getMem(6)
 #句子过长
                 if outword.shape[0]>self.maxlength:
                     answer=answer[:-1]
                     continue
 #补零
-                getMem(7)
                 pads.append(outword.shape[0])
                 outword=np.pad(outword,((0,self.maxlength-outword.shape[0]),(0,0)),'constant')
                 inputs.append(outword)
-                getMem(8)
 
             inputs=np.array(inputs)
-            getMem(9)
 #构建输出
             answers=np.zeros((len(answer),pow(len(self.verbtags),self.num_verbs)))
             for num in range(len(answer)):

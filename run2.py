@@ -40,7 +40,7 @@ tf.flags.DEFINE_integer('num_batches', 1000000, 'num of train steps for saving m
 FLAGS = tf.flags.FLAGS
 #FLAGS._parse_flags()
 
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 embedding_size=100
 patchlength=3
 num_verbs=1
@@ -153,7 +153,7 @@ def main(_):
         total_loss=0
         total_acc=0
         for e in range(FLAGS.num_batches):
-            inputs,pads,answers = data.list_tags(FLAGS.batch_size)
+            inputs,pads,answers,_ = data.list_tags(FLAGS.batch_size)
             getMem(0)
             feed = {model.input_data:inputs, model.targets:answers, model.output_keep_prob:FLAGS.dropout_keep_prob,model.pad:pads}
             getMem(1)

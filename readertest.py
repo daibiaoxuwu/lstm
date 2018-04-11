@@ -13,18 +13,6 @@ import json
 from queue import Queue
 #bug:shorten和shorten_front不一样的话,每一遍都得重新计算而不是直接从队列里拿出来!
 
-def getMem(ini):
-    with open('/proc/meminfo') as f:
-        total = int(f.readline().split()[1])
-        free = int(f.readline().split()[1])
-        buffers = int(f.readline().split()[1])
-        cache = int(f.readline().split()[1])
-        #print('i',ini)
-        while(buffers<1000000):
-            print('wait',buffers)
-            time.sleep(60)
-            buffers = int(f.readline().split()[1])
-        return buffers
 
 class reader(object):
     def printtag(self,number):
@@ -117,13 +105,14 @@ class reader(object):
 
     def list_tags(self,batch_size):
         while True:#防止读到末尾
+            initials=[]
+            oldsengroup=[]
             inputs=[]
             pads=[]
             answer=[]
             count=0
             while len(answer)<batch_size:
                 #print('batch_size',batch_size)
-                getMem(0)
 
                 if self.testflag==True:
                     if self.shorten==True:
@@ -148,7 +137,6 @@ class reader(object):
                 initial=''
                 total=0
                 singleverb=0
-                getMem(1)
 #筛选只有一个动词的句子                
                 for tag in sentence.split():
                     if tag[0]=='(':
@@ -164,9 +152,10 @@ class reader(object):
                     continue
 #前文句子
                 newqueue=Queue()
-                getMem(2)
+                newmem=[]
                 for _ in range(self.patchlength):
                     oldsentence=self.oldqueue.get()
+                    newmem.append(oldsentence)
                     newqueue.put(oldsentence)
                     for tag in oldsentence.split():
                         if tag[0]=='(':
@@ -191,11 +180,10 @@ class reader(object):
                                     tagword[0]=1
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
-                getMem(3)
+                oldsengroup.append(newmem)
                 self.oldqueue=newqueue
                 self.oldqueue.put(sentence)
                 self.oldqueue.get()
-                getMem(4)
                 #print('point at:',self.resp.tell())
 
 #本句                
@@ -248,29 +236,25 @@ class reader(object):
                                     tagword[0]=1
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
-                getMem(5)
                 outword=np.array(outword)
-                getMem(6)
 #句子过长
                 if outword.shape[0]>self.maxlength:
                     answer=answer[:-1]
                     continue
 #补零
-                getMem(7)
                 pads.append(outword.shape[0])
                 outword=np.pad(outword,((0,self.maxlength-outword.shape[0]),(0,0)),'constant')
                 inputs.append(outword)
-                getMem(8)
+                initials.append(initial)
 
             inputs=np.array(inputs)
-            getMem(9)
 #构建输出
             answers=np.zeros((len(answer),pow(len(self.verbtags),self.num_verbs)))
             for num in range(len(answer)):
                 answers[num][answer[num]]=1
 #用完整个输入,从头开始
 #continue the 'while True' loop
-            return inputs,pads,answers,singleverb
+            return initials,inputs,pads,answers,singleverb,oldsengroup
 
 if __name__ == '__main__':
     model = reader()

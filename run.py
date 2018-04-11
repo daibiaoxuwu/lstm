@@ -31,8 +31,8 @@ training_iters = 10000000       #迭代次数
 batch_size=50                   #batch数量
 display_step = 20               #多少步输出一次结果
 saving_step=1000                  #多少步保存一次
-num_verbs=2                     #一次看两个动词
-allinclude=False                #只看刚好含有num_verbs个动词的句子
+num_verbs=1                     #一次看两个动词
+allinclude=True                #只看刚好含有num_verbs个动词的句子
 passnum=0
 
 time_verbose_flag=False         #测量输入和运行的时间比
@@ -42,22 +42,24 @@ rnnmodel = importlib.import_module('rnnmodel')
 
 
 config=tf.ConfigProto()
-loadold=False
+config.gpu_options.per_process_gpu_memory_fraction=0.45#占用45%显存
+loadold=True
 shorten=False
 shorten_front=False
 testflag=False
 multiflag=False
 multinum=1
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:ais:oStP:T:")
+    opts, args = getopt.getopt(sys.argv[1:],"hg:l:L:p:x:n:r:m:ais:oStP:T:")
 except getopt.GetoptError:
     print('使用不正确.详见python run.py -h')
     sys.exit()
 for opt, arg in opts:
     if opt == '-h':
         print('''usage:
-run.py  -g 使用gpu号(0,1) 默认:0    
-        -l limit 是否限制gpu显存为50%(不填)(默认:不限制)
+run.py  -g 使用gpu号(0,1) 默认:不使用
+        -l limit 是否限制gpu显存为50%(不填)(默认:限制)
+        -L learning_rate
         -p patchlength前文数量(数字,默认:3)
         -x maxlength句子长度(数字,默认:700)
         -n num_verbs单词数量(数字,默认:2)
@@ -65,8 +67,8 @@ run.py  -g 使用gpu号(0,1) 默认:0
         -m rnn模型(模型名,文件名去掉.py 默认:rnnmodel)
         -a 存储的allow_growth(不填)(默认:不允许)
         -s 保存用的标识,默认:run.log路径为log/run,保存路径为ckpt2/run/run.ckpt
-        -i allinclude 默认为读入时只读入含有num_verbs个动词的句子, 设置后读入所有含有不少于num_verbs的句子
-        -o 是否从上次的模型加载
+        -i allinclude 默认为not[读入时只读入含有num_verbs个动词的句子, 设置后读入所有含有不少于num_verbs的句子]
+        -o 是否从上次的模型加载 默认:是
         -S shorten=True shorten_front=True
         -P 读入时跳过几个
         -t test
@@ -75,7 +77,9 @@ run.py  -g 使用gpu号(0,1) 默认:0
     elif opt=="-g":
         os.environ["CUDA_VISIBLE_DEVICES"]=arg
     elif opt=="-l":
-        config.gpu_options.per_process_gpu_memory_fraction=0.45#占用45%显存
+        config.gpu_options.per_process_gpu_memory_fraction=float(arg)#占用显存
+    elif opt=="-L":
+        initial_training_rate=float(arg)
     elif opt=="-p":
         patchlength=int(arg)
     elif opt=="-x":
@@ -94,9 +98,9 @@ run.py  -g 使用gpu号(0,1) 默认:0
         saving_path3='ckpt3/'+arg+'/'+arg+'.ckpt'
         load_path='ckpt2/'+arg
     elif opt=="-i":
-        allinclude=True
+        allinclude=False
     elif opt=="-o":
-        loadold=True
+        loadold=False
     elif opt=="-S":
         shorten=True
         shorten_front=True
@@ -185,13 +189,13 @@ while True:
             session.run(tf.global_variables_initializer())#初始化变量
             if loadold:
 #reload the test model multiple times
-                    if multiflag==True:
-                        ckpt = tf.train.get_checkpoint_state('ckpt2/p'+str(multitime)+'n1')
-                        print('p'+str(multitime)+'n1')
-                    else:
-                        ckpt = tf.train.get_checkpoint_state(load_path)
+                if multiflag==True:
+                    ckpt = tf.train.get_checkpoint_state('ckpt2/p'+str(multitime)+'n1')
+                    print('p'+str(multitime)+'n1')
+                else:
+                    ckpt = tf.train.get_checkpoint_state(load_path)
 
-                    saver.restore(session, ckpt.model_checkpoint_path)
+                saver.restore(session, ckpt.model_checkpoint_path)
             step = 1
             acc_total = 0
             loss_total = 0

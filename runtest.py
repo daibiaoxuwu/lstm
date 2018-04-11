@@ -216,11 +216,10 @@ while True:
                     step+=1
                 else:
                     for i in range(len(pred)):
-                        if (pred[i]!=answers[i]).any():
-                            print(pred[i])
-                            print(answers[i])
+                        if tf.argmax(pred[i]).eval() != tf.argmax(answers[i]).eval():
+                            print('p',pred[i])
+                            print('a',answers[i])
                             print(initial[i]+'\nwrong: '+data.printtag(tf.argmax(pred[i]).eval())+' right:'+data.printtag(tf.argmax(answers[i]).eval())+'\n\n')
-                            input()
                             
 
                     loss_total += loss
@@ -235,15 +234,10 @@ while True:
                         print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
                               "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
                               "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
-                        if acc_total>max_acc_total:
-                            max_acc_total=acc_total
-                            print('saved to: ', saver.save(session,saving_path3,global_step=step))
                         start_time=time.time()
                         acc_total = 0
                         loss_total = 0
 #保存
-                    if step % saving_step ==0:
-                        print('saved to: ', saver.save(session,saving_path,global_step=step))
             print("Optimization Finished!")
             print("Run on command line.")
             print("\ttensorboard --logdir=%s" % (logs_path))
