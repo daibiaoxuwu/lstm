@@ -49,6 +49,7 @@ class reader(object):
                         initial+=' '+node.group(1)
         return initial
     def work(self,a):
+        print('a',a)
         url = 'http://166.111.139.15:9000'
         params = {'properties' : r"{'annotators': 'tokenize,ssplit,pos,lemma,parse,depparse', 'outputFormat': 'json'}"}
         while True:
@@ -57,7 +58,11 @@ class reader(object):
                 break
             except ConnectionRefusedError:
                 print('error, retrying...')
-        content=json.loads(resp)
+        try:
+            content=json.loads(resp)
+        except:
+            print('resp',resp)
+            raise Exception
         for sentence in content['sentences']:
             for i in sentence['enhancedPlusPlusDependencies']:
                 if 'nsubjpass' in i.values():

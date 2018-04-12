@@ -10,6 +10,20 @@ import importlib
 from elapsed import elapsed
 
 
+'''
+def getMem():
+    with open('/proc/meminfo') as f:
+        total = int(f.readline().split()[1])
+        free = int(f.readline().split()[1])
+        buffers = int(f.readline().split()[1])
+        cache = int(f.readline().split()[1])
+        while(buffers<1000000):
+            print('wait',buffers)
+            time.sleep(60)
+            buffers = int(f.readline().split()[1])
+        return buffers
+'''
+
 
 
 
@@ -133,18 +147,6 @@ run.py  -g 使用gpu号(0,1) 默认:不使用
 
 
 start_time = time.time()
-def getMem():
-    with open('/proc/meminfo') as f:
-        total = int(f.readline().split()[1])
-        free = int(f.readline().split()[1])
-        buffers = int(f.readline().split()[1])
-        cache = int(f.readline().split()[1])
-        while(buffers<1000000):
-            print('wait',buffers)
-            time.sleep(60)
-            buffers = int(f.readline().split()[1])
-        return buffers
-
 #input
 data=reader.reader(patchlength=patchlength,\
             maxlength=maxlength,\
@@ -235,7 +237,8 @@ while True:
 #输出
                     if step % display_step == 0:
                         writer.add_summary(summary, step)
-                        print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
+                        #print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
+                        print( "Iter= " + str(step+1) + ", Average Loss= " + \
                               "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
                               "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
                         if testflag==False and acc_total>max_acc_total:
