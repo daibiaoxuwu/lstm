@@ -1,9 +1,9 @@
-log/*
+log*/*
 train/*
+ckpt/*
 ckpt*/*
 *.swp
 *.swo
 save/*
 __pycache__/*
-
-
+ 

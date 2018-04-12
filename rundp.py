@@ -10,20 +10,6 @@ import importlib
 from elapsed import elapsed
 
 
-'''
-def getMem():
-    with open('/proc/meminfo') as f:
-        total = int(f.readline().split()[1])
-        free = int(f.readline().split()[1])
-        buffers = int(f.readline().split()[1])
-        cache = int(f.readline().split()[1])
-        while(buffers<1000000):
-            print('wait',buffers)
-            time.sleep(60)
-            buffers = int(f.readline().split()[1])
-        return buffers
-'''
-
 
 
 
@@ -43,15 +29,15 @@ maxlength=700                   #输入序列最大长度
 initial_training_rate=0.0001     #学习率
 training_iters = 10000000       #迭代次数
 batch_size=50                   #batch数量
-display_step = 20               #多少步输出一次结果
-saving_step=1000                  #多少步保存一次
+display_step = 5               #多少步输出一次结果
+saving_step=50                  #多少步保存一次
 num_verbs=1                     #一次看两个动词
 allinclude=True                #只看刚好含有num_verbs个动词的句子
 passnum=0
 
 time_verbose_flag=False         #测量输入和运行的时间比
 
-reader = importlib.import_module('reader')
+reader = importlib.import_module('readerdp')
 rnnmodel = importlib.import_module('rnnmodel')
 
 
@@ -147,6 +133,18 @@ run.py  -g 使用gpu号(0,1) 默认:不使用
 
 
 start_time = time.time()
+def getMem():
+    with open('/proc/meminfo') as f:
+        total = int(f.readline().split()[1])
+        free = int(f.readline().split()[1])
+        buffers = int(f.readline().split()[1])
+        cache = int(f.readline().split()[1])
+        while(buffers<1000000):
+            print('wait',buffers)
+            time.sleep(60)
+            buffers = int(f.readline().split()[1])
+        return buffers
+
 #input
 data=reader.reader(patchlength=patchlength,\
             maxlength=maxlength,\
@@ -159,7 +157,7 @@ data=reader.reader(patchlength=patchlength,\
             passnum=passnum)
 
 
-model=rnnmodel.rnnmodel(vocab_single=6,\
+model=rnnmodel.rnnmodel(vocab_single=2,\
             maxlength=maxlength,\
             embedding_size=embedding_size,\
             initial_training_rate=initial_training_rate,\
@@ -215,8 +213,8 @@ while True:
                 if multitime==0:
                     #print('listtags')
 
-                    inputs,pads,answers,singleverb=data.list_tags(batch_size)
-                    #print('sv',singleverb)
+                    inputs,pads,answers=data.list_tags(batch_size)
+                    #print('sv')
 #运行一次
                 _,pred, acc, loss, onehot_pred, summary= session.run([model.optimizer, model.pred, model.accuracy, model.cost, model.pred, merged], \
                                                         feed_dict={model.x: inputs, model.y: answers, model.p:pads})
@@ -237,8 +235,7 @@ while True:
 #输出
                     if step % display_step == 0:
                         writer.add_summary(summary, step)
-                        #print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
-                        print( "Iter= " + str(step+1) + ", Average Loss= " + \
+                        print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
                               "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
                               "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
                         if testflag==False and acc_total>max_acc_total:

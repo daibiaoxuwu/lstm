@@ -10,20 +10,6 @@ import importlib
 from elapsed import elapsed
 
 
-'''
-def getMem():
-    with open('/proc/meminfo') as f:
-        total = int(f.readline().split()[1])
-        free = int(f.readline().split()[1])
-        buffers = int(f.readline().split()[1])
-        cache = int(f.readline().split()[1])
-        while(buffers<1000000):
-            print('wait',buffers)
-            time.sleep(60)
-            buffers = int(f.readline().split()[1])
-        return buffers
-'''
-
 
 
 
@@ -40,40 +26,38 @@ load_path='ckpt2/run/'
 patchlength=3                   #输入的前文句子的数量
 embedding_size=100              #词向量维度数量
 maxlength=700                   #输入序列最大长度
-initial_training_rate=0.0001     #学习率
+initial_training_rate=0.0002     #学习率
 training_iters = 10000000       #迭代次数
 batch_size=50                   #batch数量
 display_step = 20               #多少步输出一次结果
 saving_step=1000                  #多少步保存一次
 num_verbs=1                     #一次看两个动词
-allinclude=True                #只看刚好含有num_verbs个动词的句子
+allinclude=False                #只看刚好含有num_verbs个动词的句子
 passnum=0
 
 time_verbose_flag=False         #测量输入和运行的时间比
 
-reader = importlib.import_module('reader')
+reader = importlib.import_module('readertest')
 rnnmodel = importlib.import_module('rnnmodel')
 
 
 config=tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction=0.45#占用45%显存
-loadold=True
+loadold=False
 shorten=False
 shorten_front=False
 testflag=False
 multiflag=False
 multinum=1
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"hg:l:L:p:x:n:r:m:ais:oStP:T:")
+    opts, args = getopt.getopt(sys.argv[1:],"hg:lp:x:n:r:m:ais:oStP:T:")
 except getopt.GetoptError:
     print('使用不正确.详见python run.py -h')
     sys.exit()
 for opt, arg in opts:
     if opt == '-h':
         print('''usage:
-run.py  -g 使用gpu号(0,1) 默认:不使用
-        -l limit 是否限制gpu显存为50%(不填)(默认:限制)
-        -L learning_rate
+run.py  -g 使用gpu号(0,1) 默认:0    
+        -l limit 是否限制gpu显存为50%(不填)(默认:不限制)
         -p patchlength前文数量(数字,默认:3)
         -x maxlength句子长度(数字,默认:700)
         -n num_verbs单词数量(数字,默认:2)
@@ -81,8 +65,8 @@ run.py  -g 使用gpu号(0,1) 默认:不使用
         -m rnn模型(模型名,文件名去掉.py 默认:rnnmodel)
         -a 存储的allow_growth(不填)(默认:不允许)
         -s 保存用的标识,默认:run.log路径为log/run,保存路径为ckpt2/run/run.ckpt
-        -i allinclude 默认为not[读入时只读入含有num_verbs个动词的句子, 设置后读入所有含有不少于num_verbs的句子]
-        -o 是否从上次的模型加载 默认:是
+        -i allinclude 默认为读入时只读入含有num_verbs个动词的句子, 设置后读入所有含有不少于num_verbs的句子
+        -o 是否从上次的模型加载
         -S shorten=True shorten_front=True
         -P 读入时跳过几个
         -t test
@@ -91,9 +75,7 @@ run.py  -g 使用gpu号(0,1) 默认:不使用
     elif opt=="-g":
         os.environ["CUDA_VISIBLE_DEVICES"]=arg
     elif opt=="-l":
-        config.gpu_options.per_process_gpu_memory_fraction=float(arg)#占用显存
-    elif opt=="-L":
-        initial_training_rate=float(arg)
+        config.gpu_options.per_process_gpu_memory_fraction=0.45#占用45%显存
     elif opt=="-p":
         patchlength=int(arg)
     elif opt=="-x":
@@ -112,9 +94,9 @@ run.py  -g 使用gpu号(0,1) 默认:不使用
         saving_path3='ckpt3/'+arg+'/'+arg+'.ckpt'
         load_path='ckpt2/'+arg
     elif opt=="-i":
-        allinclude=False
+        allinclude=True
     elif opt=="-o":
-        loadold=False
+        loadold=True
     elif opt=="-S":
         shorten=True
         shorten_front=True
@@ -123,7 +105,6 @@ run.py  -g 使用gpu号(0,1) 默认:不使用
         allinclude=True
         batch_size=1
         saving_step=100000000000
-        display_step=10000000000
 
 #        config.device_count={'gpu':0}#使用cpu
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
@@ -134,19 +115,30 @@ run.py  -g 使用gpu号(0,1) 默认:不使用
         allinclude=True
         batch_size=1
         saving_step=100000000000
-        display_step=10000000000
 
 #        config.device_count={'gpu':0}#使用cpu
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
         multiflag=True
         multinum=int(arg)
-        training_iters=2
+        training_iters=1
     elif opt=='-P':
         passnum=int(arg)
 
 
 
 start_time = time.time()
+def getMem():
+    with open('/proc/meminfo') as f:
+        total = int(f.readline().split()[1])
+        free = int(f.readline().split()[1])
+        buffers = int(f.readline().split()[1])
+        cache = int(f.readline().split()[1])
+        while(buffers<1000000):
+            print('wait',buffers)
+            time.sleep(60)
+            buffers = int(f.readline().split()[1])
+        return buffers
+
 #input
 data=reader.reader(patchlength=patchlength,\
             maxlength=maxlength,\
@@ -182,22 +174,20 @@ print('start session')
 
 #multi-time test
 while True:
-    print('iter')
-    multitime=0
-    while True:
+    for multitime in range(multinum):
         print('nut,',multitime)
 
         with tf.Session(config=config) as session:
             session.run(tf.global_variables_initializer())#初始化变量
             if loadold:
 #reload the test model multiple times
-                if multiflag==True:
-                    ckpt = tf.train.get_checkpoint_state('ckpt2/p'+str(multitime)+'n1')
-                    print('p'+str(multitime)+'n1')
-                else:
-                    ckpt = tf.train.get_checkpoint_state(load_path)
+                    if multiflag==True:
+                        ckpt = tf.train.get_checkpoint_state('ckpt2/p'+str(multitime)+'n1')
+                        print('p'+str(multitime)+'n1')
+                    else:
+                        ckpt = tf.train.get_checkpoint_state(load_path)
 
-                saver.restore(session, ckpt.model_checkpoint_path)
+                    saver.restore(session, ckpt.model_checkpoint_path)
             step = 1
             acc_total = 0
             loss_total = 0
@@ -213,10 +203,7 @@ while True:
                 #print('i')
                 #print('b',batch_size)
                 if multitime==0:
-                    #print('listtags')
-
-                    inputs,pads,answers,singleverb=data.list_tags(batch_size)
-                    #print('sv',singleverb)
+                    initial,inputs,pads,answers,singleverb,oldsengroup=data.list_tags(batch_size)
 #运行一次
                 _,pred, acc, loss, onehot_pred, summary= session.run([model.optimizer, model.pred, model.accuracy, model.cost, model.pred, merged], \
                                                         feed_dict={model.x: inputs, model.y: answers, model.p:pads})
@@ -228,6 +215,29 @@ while True:
                     print('pred:', data.printtag(tf.argmax(pred[0]).eval()))
                     step+=1
                 else:
+                    for i in range(len(pred)):
+                        if tf.argmax(pred[i]).eval() != tf.argmax(answers[i]).eval():
+                            pred[i][tf.argmax(pred[i]).eval()]=-100
+                            if tf.argmax(pred[i]).eval() != tf.argmax(answers[i]).eval():
+                                with open('out2.txt','w') as f:
+                                    print('p',pred[i])
+                                    print('a',answers[i])
+                                    print('old:')
+                                    print(oldsengroup[i][0].strip())
+                                    print(oldsengroup[i][1].strip())
+                                    print(oldsengroup[i][2].strip())
+                                    print('new:')
+                                    print(initial[i]+'\nwrong: '+data.printtag(tf.argmax(pred[i]).eval())+' right:'+data.printtag(tf.argmax(answers[i]).eval()))
+                                
+                                    f.write('p'+str(pred[i]))
+                                    f.write('a'+str(answers[i]))
+                                    f.write('old:')
+                                    f.write(oldsengroup[i][0].strip())
+                                    f.write(oldsengroup[i][1].strip())
+                                    f.write(oldsengroup[i][2].strip())
+                                    f.write('new:')
+                                    f.write(initial[i]+'\nwrong: '+data.printtag(tf.argmax(pred[i]).eval())+' right:'+data.printtag(tf.argmax(answers[i]).eval()))
+
                     loss_total += loss
                     acc_total += acc
                     step += 1
@@ -237,21 +247,13 @@ while True:
 #输出
                     if step % display_step == 0:
                         writer.add_summary(summary, step)
-                        #print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
-                        print( "Iter= " + str(step+1) + ", Average Loss= " + \
+                        print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
                               "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
                               "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
-                        if testflag==False and acc_total>max_acc_total:
-                            max_acc_total=acc_total
-                            print('saved to: ', saver.save(session,saving_path3,global_step=step))
                         start_time=time.time()
                         acc_total = 0
                         loss_total = 0
 #保存
-                    if step % saving_step ==0:
-                        print('saved to: ', saver.save(session,saving_path,global_step=step))
-            if testflag==True:
-                multitime+=1
-                if multitime>=singleverb:
-                    print('mts',multitime,singleverb)
-                    break
+            print("Optimization Finished!")
+            print("Run on command line.")
+            print("\ttensorboard --logdir=%s" % (logs_path))

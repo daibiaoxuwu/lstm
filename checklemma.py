@@ -13,6 +13,18 @@ import json
 from queue import Queue
 #bug:shorten和shorten_front不一样的话,每一遍都得重新计算而不是直接从队列里拿出来!
 
+def getMem(ini):
+    with open('/proc/meminfo') as f:
+        total = int(f.readline().split()[1])
+        free = int(f.readline().split()[1])
+        buffers = int(f.readline().split()[1])
+        cache = int(f.readline().split()[1])
+        #print('i',ini)
+        while(buffers<1000000):
+            print('wait',buffers)
+            time.sleep(60)
+            buffers = int(f.readline().split()[1])
+        return buffers
 
 class reader(object):
     def printtag(self,number):
@@ -33,11 +45,11 @@ class reader(object):
             except ConnectionRefusedError:
                 print('error, retrying...')
     def __init__(self,\
-                patchlength=3,\
+                patchlength=0,\
                 maxlength=700,\
                 embedding_size=100,\
-                num_verbs=2,\
-                allinclude=False,\
+                num_verbs=1,\
+                allinclude=True,\
                 shorten=False,\
                 shorten_front=False,\
                 testflag=False,\
@@ -67,8 +79,9 @@ class reader(object):
             self.resp=open(r'train/resp2').readlines()
             self.readlength=len(self.resp)
             print('readlength',self.readlength)
-            self.pointer=random.randint(0,self.readlength-1)
-#            self.pointer=1621919
+#            self.pointer=random.randint(0,self.readlength-1)
+            self.pointer=1621919
+            self.pointer=0
             print('pointer',self.pointer)
             for _ in range(self.patchlength):
                 self.oldqueue.put(self.resp[self.pointer])
@@ -85,7 +98,7 @@ class reader(object):
 #加载文字
 
 #加载原型词典(把动词变为它的原型)
-        with open('train/ldict2', 'rb') as f:
+        with open('train/ldict', 'rb') as f:
             self.ldict = pickle.load(f)
         with open('train/tagdict', 'rb') as f:
             self.tagdict = pickle.load(f)
@@ -114,6 +127,7 @@ class reader(object):
             count=0
             while len(answer)<batch_size:
                 #print('batch_size',batch_size)
+                getMem(0)
 
                 if self.testflag==True:
                     if self.shorten==True:
@@ -133,10 +147,12 @@ class reader(object):
                     if self.pointer==self.readlength:
                         self.pointer=0
                         print('epoch')
+                        input()
 
                 outword=[]
                 total=0
                 singleverb=0
+                getMem(1)
 #筛选只有一个动词的句子                
                 for tag in sentence.split():
                     if tag[0]=='(':
@@ -152,6 +168,7 @@ class reader(object):
                     continue
 #前文句子
                 newqueue=Queue()
+                getMem(2)
                 for _ in range(self.patchlength):
                     oldsentence=self.oldqueue.get()
                     newqueue.put(oldsentence)
@@ -178,9 +195,11 @@ class reader(object):
                                     tagword[0]=1
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
+                getMem(3)
                 self.oldqueue=newqueue
                 self.oldqueue.put(sentence)
                 self.oldqueue.get()
+                getMem(4)
                 #print('point at:',self.resp.tell())
 
 #本句                
@@ -222,7 +241,8 @@ class reader(object):
                                         else:
                                             outword.append([0]*self.embedding_size)
                                     else:
-                                        outword.append(self.model[node.group(1)].tolist())
+                                        if node.group(1) in self.ldict:
+                                            print('errornoun',node.group(1),self.lemma(node.group(1)))
                                 else:
                                     outword.append([0]*self.embedding_size)
                                 if not self.shorten:
@@ -230,17 +250,22 @@ class reader(object):
                                     tagword[0]=1
                                     for _ in range(len(node.group(2))-1):
                                         outword.append(tagword)
+                getMem(5)
                 outword=np.array(outword)
+                getMem(6)
 #句子过长
                 if outword.shape[0]>self.maxlength:
                     answer=answer[:-1]
                     continue
 #补零
+                getMem(7)
                 pads.append(outword.shape[0])
                 outword=np.pad(outword,((0,self.maxlength-outword.shape[0]),(0,0)),'constant')
                 inputs.append(outword)
+                getMem(8)
 
             inputs=np.array(inputs)
+            getMem(9)
 #构建输出
             answers=np.zeros((len(answer),pow(len(self.verbtags),self.num_verbs)))
             for num in range(len(answer)):
@@ -250,6 +275,8 @@ class reader(object):
             return inputs,pads,answers,singleverb
 
 if __name__ == '__main__':
-    model = reader()
+    model = reader(allinclude=True)
     for i in range(500000000):
-        model.list_tags(500)
+        model.list_tags(50)
+        if i % 100==0:
+            print('i',i)

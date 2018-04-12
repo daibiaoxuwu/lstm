@@ -10,22 +10,10 @@ import importlib
 from elapsed import elapsed
 
 
-'''
-def getMem():
-    with open('/proc/meminfo') as f:
-        total = int(f.readline().split()[1])
-        free = int(f.readline().split()[1])
-        buffers = int(f.readline().split()[1])
-        cache = int(f.readline().split()[1])
-        while(buffers<1000000):
-            print('wait',buffers)
-            time.sleep(60)
-            buffers = int(f.readline().split()[1])
-        return buffers
-'''
 
 
-
+def check(verse):
+    content=verse.split('.','\n')
 
 os.environ["CUDA_VISIBLE_DEVICES"]=""#环境变量：使用第一块gpu
 logs_path = 'log/run'
@@ -63,72 +51,8 @@ shorten_front=False
 testflag=False
 multiflag=False
 multinum=1
-try:
-    opts, args = getopt.getopt(sys.argv[1:],"hg:l:L:p:x:n:r:m:ais:oStP:T:")
-except getopt.GetoptError:
-    print('使用不正确.详见python run.py -h')
-    sys.exit()
-for opt, arg in opts:
-    if opt == '-h':
-        print('''usage:
-run.py  -g 使用gpu号(0,1) 默认:不使用
-        -l limit 是否限制gpu显存为50%(不填)(默认:限制)
-        -L learning_rate
-        -p patchlength前文数量(数字,默认:3)
-        -x maxlength句子长度(数字,默认:700)
-        -n num_verbs单词数量(数字,默认:2)
-        -r 读取模型(模型名,文件名去掉.py 默认:reader)
-        -m rnn模型(模型名,文件名去掉.py 默认:rnnmodel)
-        -a 存储的allow_growth(不填)(默认:不允许)
-        -s 保存用的标识,默认:run.log路径为log/run,保存路径为ckpt2/run/run.ckpt
-        -i allinclude 默认为not[读入时只读入含有num_verbs个动词的句子, 设置后读入所有含有不少于num_verbs的句子]
-        -o 是否从上次的模型加载 默认:是
-        -S shorten=True shorten_front=True
-        -P 读入时跳过几个
-        -t test
-        ''')
-        sys.exit()
-    elif opt=="-g":
-        os.environ["CUDA_VISIBLE_DEVICES"]=arg
-    elif opt=="-l":
-        config.gpu_options.per_process_gpu_memory_fraction=float(arg)#占用显存
-    elif opt=="-L":
-        initial_training_rate=float(arg)
-    elif opt=="-p":
-        patchlength=int(arg)
-    elif opt=="-x":
-        maxlength=int(arg)
-    elif opt=="-n":
-        num_verbs=int(arg)
-    elif opt=="-r":
-        reader = importlib.import_module(arg)
-    elif opt=="-m":
-        rnnmodel = importlib.import_module(arg)
-    elif opt=="-a":
-        tf_config.gpu_options.allow_growth = True
-    elif opt=="-s":
-        logs_path = 'log/'+arg
-        saving_path='ckpt2/'+arg+'/'+arg+'.ckpt'
-        saving_path3='ckpt3/'+arg+'/'+arg+'.ckpt'
-        load_path='ckpt2/'+arg
-    elif opt=="-i":
-        allinclude=False
-    elif opt=="-o":
-        loadold=False
-    elif opt=="-S":
-        shorten=True
-        shorten_front=True
-    elif opt=='-t':
-        loadold=True
-        allinclude=True
-        batch_size=1
-        saving_step=100000000000
-        display_step=10000000000
+tf_config.gpu_options.allow_growth = True
 
-#        config.device_count={'gpu':0}#使用cpu
-        os.environ["CUDA_VISIBLE_DEVICES"] = ""
-        testflag=True
-    elif opt=='-T':
         testflag=True
         loadold=True
         allinclude=True
@@ -137,16 +61,26 @@ run.py  -g 使用gpu号(0,1) 默认:不使用
         display_step=10000000000
 
 #        config.device_count={'gpu':0}#使用cpu
-        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+        #os.environ["CUDA_VISIBLE_DEVICES"] = ""#>?????????????????
+
         multiflag=True
-        multinum=int(arg)
-        training_iters=2
-    elif opt=='-P':
-        passnum=int(arg)
+        multinum=4
 
 
 
 start_time = time.time()
+def getMem():
+    with open('/proc/meminfo') as f:
+        total = int(f.readline().split()[1])
+        free = int(f.readline().split()[1])
+        buffers = int(f.readline().split()[1])
+        cache = int(f.readline().split()[1])
+        while(buffers<1000000):
+            print('wait',buffers)
+            time.sleep(60)
+            buffers = int(f.readline().split()[1])
+        return buffers
+
 #input
 data=reader.reader(patchlength=patchlength,\
             maxlength=maxlength,\
@@ -237,8 +171,7 @@ while True:
 #输出
                     if step % display_step == 0:
                         writer.add_summary(summary, step)
-                        #print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
-                        print( "Iter= " + str(step+1) + ", Average Loss= " + \
+                        print('free memory= '+str(int(getMem()/1000000))+"GB, Iter= " + str(step+1) + ", Average Loss= " + \
                               "{:.6f}".format(loss_total/display_step) + ", Average Accuracy= " + \
                               "{:.2f}%".format(100*acc_total/display_step)," Elapsed time: ", elapsed(time.time() - start_time))
                         if testflag==False and acc_total>max_acc_total:

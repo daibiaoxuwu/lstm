@@ -18,12 +18,12 @@ tf.flags.DEFINE_integer('rnn_size', 20, 'hidden units of RNN , as well as dimens
 #tf.flags.DEFINE_integer('rnn_size', 100, 'hidden units of RNN , as well as dimensionality of character embedding (default: 100)')
 tf.flags.DEFINE_float('dropout_keep_prob', 0.5, 'Dropout keep probability (default : 0.5)')#too high?
 tf.flags.DEFINE_integer('layer_size', 2, 'number of layers of RNN (default: 2)')
-tf.flags.DEFINE_integer('batch_size', 128, 'Batch Size (default : 32)')
+tf.flags.DEFINE_integer('batch_size', 50, 'Batch Size (default : 32)')
 #tf.flags.DEFINE_integer('sequence_length', 15, 'Sequence length (default : 32)')
 tf.flags.DEFINE_integer('attn_size', 256, 'attention layer size')
 tf.flags.DEFINE_float('grad_clip', 5.0, 'clip gradients at this value')
 tf.flags.DEFINE_integer("num_epochs", 300, 'Number of training epochs (default: 200)')
-tf.flags.DEFINE_float('learning_rate', 0.0001, 'learning rate')
+tf.flags.DEFINE_float('learning_rate', 0.00001, 'learning rate')
 tf.flags.DEFINE_string('train_file', 'rt_train.txt', 'train raw file')
 tf.flags.DEFINE_string('test_file', 'rt_test.txt', 'train raw file')
 tf.flags.DEFINE_string('data_dir', 'data', 'data directory')
@@ -40,7 +40,7 @@ tf.flags.DEFINE_integer('num_batches', 1000000, 'num of train steps for saving m
 FLAGS = tf.flags.FLAGS
 #FLAGS._parse_flags()
 
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 embedding_size=100
 patchlength=3
 num_verbs=1
@@ -153,7 +153,7 @@ def main(_):
         total_loss=0
         total_acc=0
         for e in range(FLAGS.num_batches):
-            inputs,pads,answers = data.list_tags(FLAGS.batch_size)
+            inputs,pads,answers,_ = data.list_tags(FLAGS.batch_size)
             getMem(0)
             feed = {model.input_data:inputs, model.targets:answers, model.output_keep_prob:FLAGS.dropout_keep_prob,model.pad:pads}
             getMem(1)
