@@ -218,7 +218,7 @@ while True:
                     inputs,pads,answers,singleverb=data.list_tags(batch_size)
                     #print('sv',singleverb)
 #运行一次
-                _,pred, acc, loss, onehot_pred, summary= session.run([model.optimizer, model.pred, model.accuracy, model.cost, model.pred, merged], \
+                _,pred, acc, loss, summary= session.run([model.optimizer, model.pred, model.accuracy, model.cost, merged], \
                                                         feed_dict={model.x: inputs, model.y: answers, model.p:pads})
 #累加计算平均正确率
                 if testflag==True:
