@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 import time
 import os
+import pickle
 import sys, getopt
 import readercommit
 import rnnmodelcommit
@@ -63,6 +64,8 @@ def check(verse):
                 num_verbs=1)
 
     saver=tf.train.Saver()
+    with open('train/cldict','rb') as f:
+        cldict=pickle.load(f)
     print('start session')
 
 #multi-time test
@@ -87,25 +90,28 @@ def check(verse):
                     #print('b',batch_size)
                         #print('listtags')
                 if multitime==0:
-                    inputs,pads,poses,total,answers=reader.list_tags(1)
+                    inputs,pads,poses,words,total,answers=reader.list_tags(1)
                     print('inputs:',inputs,pads,poses,total,answers)
                     if inputs==None:
                         return suggests
                     total=min(total,multinum)
                         #print('sv',singleverb)
 #运行一次
-                pred=session.run([model.pred],  feed_dict={model.x: inputs, model.p:pads})
+                pred=session.run([model.pred],  feed_dict={model.x: inputs, model.p:pads})[0]
 
+                
                 for i in range(len(pred)):
-                    if tf.argmax(pred[i]).eval() != tf.argmax(answers[i]).eval():
-                        pred[i][tf.argmax(pred[i]).eval()]=-100
-                        if tf.argmax(pred[i]).eval() != tf.argmax(answers[i]).eval():
-                            suggests.append(poses[multitime].append(reader.printtag(pred.index(max(pred)))))
-                pred=pred[0][0].tolist()
+                    if tf.argmax(pred[i]).eval() != answers[i]:
+                     #   pred[i][tf.argmax(pred[i]).eval()]=-100
+                     #   if tf.argmax(pred[i]).eval() != answers[i]:
+                            temp=poses[multitime]
+                            temp.append(cldict[reader.lemma(words[multitime])+'('+reader.printtag(tf.argmax(pred[i]).eval())])
+                            suggests.append(temp)
+                            print(suggests)
+                pred=pred[0]
                 print(pred,type(pred))
 #累加计算平均正确率
-                print('pred:', reader.printtag(pred.index(max(pred))))
                 multitime+=1
                 if multitime>=total:
                     break
-print(check('The fox is big.'))
+print('sug',check('The fox was big.'))

@@ -23,7 +23,7 @@ tf.flags.DEFINE_integer('batch_size', 50, 'Batch Size (default : 32)')
 tf.flags.DEFINE_integer('attn_size', 256, 'attention layer size')
 tf.flags.DEFINE_float('grad_clip', 5.0, 'clip gradients at this value')
 tf.flags.DEFINE_integer("num_epochs", 300, 'Number of training epochs (default: 200)')
-tf.flags.DEFINE_float('learning_rate', 0.00001, 'learning rate')
+tf.flags.DEFINE_float('learning_rate', 0.00005, 'learning rate')
 tf.flags.DEFINE_string('train_file', 'rt_train.txt', 'train raw file')
 tf.flags.DEFINE_string('test_file', 'rt_test.txt', 'train raw file')
 tf.flags.DEFINE_string('data_dir', 'data', 'data directory')
@@ -40,7 +40,7 @@ tf.flags.DEFINE_integer('num_batches', 1000000, 'num of train steps for saving m
 FLAGS = tf.flags.FLAGS
 #FLAGS._parse_flags()
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 embedding_size=100
 patchlength=3
 num_verbs=1

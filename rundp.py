@@ -42,7 +42,7 @@ rnnmodel = importlib.import_module('rnnmodel')
 
 
 config=tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction=0.45#占用45%显存
+config.gpu_options.per_process_gpu_memory_fraction=0.4#占用45%显存
 loadold=True
 shorten=False
 shorten_front=False

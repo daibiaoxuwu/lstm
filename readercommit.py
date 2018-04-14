@@ -66,6 +66,7 @@ class reader(object):
         print('loaded model')
         self.oldqueue=Queue()
 
+        #parse
         self.resp=self.parse(content)
         self.readlength=len(self.resp)
         print('readlength',self.readlength)
@@ -100,13 +101,14 @@ class reader(object):
             inputs=[]
             pads=[]
             poses=[]
+            words=[]
             answers=[]
             count=0
             while len(inputs)<batch_size:
                 if self.pointer==self.readlength:
                     self.pointer=0
                     print('epoch')
-                    return None,None,None,None,None
+                    return None,None,None,None,None,None
                 sentence=self.resp[self.pointer]
                 if len(sentence)>20000:
                     print('pointer',self.pointer)
@@ -186,6 +188,7 @@ class reader(object):
                                     if vbflag==1:
                                         print (self.pointer-1,tagcount,self.numtopos)
                                         poses.append(self.numtopos[self.pointer-1][tagcount])
+                                        words.append(node.group(1))
 #去除时态
                                         node2=self.lemma(node.group(1))
                                         if node2 in self.model:
@@ -215,8 +218,10 @@ class reader(object):
 #构建输出
 #用完整个输入,从头开始
 #continue the 'while True' loop
-            return inputs,pads,poses,total,answers
+            print('ans',answers)
+            return inputs,pads,poses,words,total,answers
 
 if __name__ == '__main__':
-    model = reader('The fox is big.')
-    model.list_tags(1)
+    model = reader('The fox is big.The foxes are bigger.')
+    print('1a',model.list_tags(1))
+    print('2a',model.list_tags(1))
