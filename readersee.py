@@ -15,23 +15,6 @@ from queue import Queue
 
 
 class reader(object):
-    def printtag(self,number):
-#        return [k for k, v in self.verbtags.items() if v == number][0]
-        return self.verbtags[number]
-    def parse(self,text):
-        #print('start parse')
-        if(text==''):
-            raise NameError
-        url = 'http://166.111.139.15:9000'
-        params = {'properties' : r"{'annotators': 'tokenize,ssplit,pos,lemma,parse', 'outputFormat': 'json'}"}
-        while True:
-            try:
-                resp = requests.post(url, text, params=params).text
-                content=json.loads(resp)
-                #print('finish parse:',re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' ')))
-                return re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' '))
-            except ConnectionRefusedError:
-                print('error, retrying...')
     def clean(self,sentence):
         initial=''
         for tag in sentence.split():
@@ -48,54 +31,33 @@ class reader(object):
                     else:
                         initial+=' '+node.group(1)
         return initial
-    def cleanclear(self,sentence):
-        initial=''
-        for tag in sentence.split():
-            if tag[0]=='(':
-                if tag[1:] in self.verbtags:
-                    vbflag=1
-                else:
-                    vbflag=0
-            else:
-                node=re.match('([^\)]+)(\)*)',tag.strip())
-                if node:
-                    initial+=' '+node.group(1)
-        return initial
-    def work(self,a):
+    def printtag(self,number):
+#        return [k for k, v in self.verbtags.items() if v == number][0]
+        return self.verbtags[number]
+    def parse(self,text):
+        print('start parse')
+        if(text==''):
+            raise NameError
         url = 'http://166.111.139.15:9000'
-        params = {'properties' : r"{'annotators': 'tokenize,ssplit,pos,lemma,parse,depparse', 'outputFormat': 'json'}"}
+        params = {'properties' : r"{'annotators': 'tokenize,ssplit,pos,lemma,parse', 'outputFormat': 'json'}"}
         while True:
             try:
-                resp = requests.post(url,a,params=params).text
-                break
+                resp = requests.post(url, text, params=params).text
+                content=json.loads(resp)
+                print('finish parse:',re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' ')))
+                return re.sub('\s+',' ',content['sentences'][0]['parse'].replace('\n',' '))
             except ConnectionRefusedError:
                 print('error, retrying...')
-        #print(resp)
-        #input()
-        try:
-            content=json.loads(resp)
-        except:
-            print('resperror: ',resp)
-            return 1
-        for sentence in content['sentences']:
-            for i in sentence['enhancedPlusPlusDependencies']:
-                if 'nsubjpass' in i.values():
-                    return 1
-              #  else:
-              #      print('notin:\n',i)
-        return 0
-        
-
     def __init__(self,\
                 patchlength=3,\
                 maxlength=700,\
                 embedding_size=100,\
-                num_verbs=2,\
+                num_verbs=1,\
                 allinclude=False,\
                 shorten=False,\
                 shorten_front=False,\
                 testflag=False,\
-                passnum=0):   #几句前文是否shorten #是否输出不带tag,只有单词的句子 
+                passnum=3):   #几句前文是否shorten #是否输出不带tag,只有单词的句子 
 
 #patchlength:每次输入前文额外的句子的数量.
 #maxlength:每句话的最大长度.(包括前文额外句子).超过该长度的句子会被丢弃.
@@ -190,6 +152,21 @@ class reader(object):
 
                 outword=[]
                 total=0
+                singleverb=0
+#筛选只有一个动词的句子                
+                for tag in sentence.split():
+                    if tag[0]=='(':
+                        if tag[1:] in self.verbtags:
+                            if self.testflag==True:
+                                print(tag[1:])
+                            total+=1
+                #print(self.allinclude,self.num_verbs,self.passnum,total)
+                if (self.allinclude==True and total<(self.num_verbs+self.passnum)) or (self.allinclude==False and total!=(self.num_verbs+self.passnum)):
+                    self.oldqueue.put(sentence)
+                    self.oldqueue.get()
+                    #print('short')
+                    continue
+                print(self.clean(sentence))
 #前文句子
                 newqueue=Queue()
                 for _ in range(self.patchlength):
@@ -232,6 +209,12 @@ class reader(object):
                         else:
                             mdflag=0
                             if tag[1:] in self.verbtags:
+                                if singleverb==self.passnum:
+                                    answer.append(self.verbtags.index(tag[1:]))
+                                elif singleverb>self.passnum and singleverb<self.num_verbs+self.passnum:
+                                    answer[-1]*=len(self.verbtags)
+                                    answer[-1]+=self.verbtags.index(tag[1:])
+                                singleverb+=1
                                 tag='(VB'
                                 vbflag=1
                             else:
@@ -252,9 +235,7 @@ class reader(object):
 #去除时态
                                         node2=self.lemma(node.group(1))
                                         if node2 in self.model:
-                                            if not (node2=='is' or node2=='have'):#去除is,have
-
-                                                outword.append(self.model[node2].tolist())
+                                            outword.append(self.model[node2].tolist())
                                         else:
                                             outword.append([0]*self.embedding_size)
                                     else:
@@ -269,13 +250,8 @@ class reader(object):
                 outword=np.array(outword)
 #句子过长
                 if outword.shape[0]>self.maxlength:
+                    answer=answer[:-1]
                     continue
-                temp=[0,0]
-                qq=self.work(self.cleanclear(sentence))
-                temp[qq]=1
-        #        print(self.clean(sentence),qq)
-        #        input()
-                answer.append(temp)
 #补零
                 pads.append(outword.shape[0])
                 outword=np.pad(outword,((0,self.maxlength-outword.shape[0]),(0,0)),'constant')
@@ -283,11 +259,14 @@ class reader(object):
 
             inputs=np.array(inputs)
 #构建输出
+            answers=np.zeros((len(answer),pow(len(self.verbtags),self.num_verbs)))
+            for num in range(len(answer)):
+                answers[num][answer[num]]=1
 #用完整个输入,从头开始
 #continue the 'while True' loop
-            return inputs,pads,answer
+            return inputs,pads,answers,singleverb
 
 if __name__ == '__main__':
     model = reader()
-    for i in range(2):
-        model.list_tags(1)
+    for i in range(500000000):
+        model.list_tags(500)

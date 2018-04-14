@@ -105,7 +105,7 @@ run.py  -g 使用gpu号(0,1) 默认:不使用
         shorten=True
         shorten_front=True
     elif opt=='-t':
-        loadold=True
+        loadold=False
         allinclude=True
         batch_size=1
         saving_step=100000000000
@@ -116,7 +116,6 @@ run.py  -g 使用gpu号(0,1) 默认:不使用
         testflag=True
     elif opt=='-T':
         testflag=True
-        loadold=True
         allinclude=True
         batch_size=1
         saving_step=100000000000
@@ -223,7 +222,7 @@ while True:
                     #print(pred)
                     #print(tf.argmax(pred[0]).eval())
                     #print(type(tf.argmax(pred[0]).eval()))
-                    print('pred:', data.printtag(tf.argmax(pred[0]).eval()))
+                    print('pred:', tf.argmax(pred[0]).eval())
                     step+=1
                 else:
                     loss_total += loss
