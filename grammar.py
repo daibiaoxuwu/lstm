@@ -4,6 +4,7 @@ from issue import Issue
 import tense
  
  
+tensechecker=tense.Tense()
 #djl
 def checkTense(content):
     suggests=tense.tensecheck(content)
@@ -16,9 +17,10 @@ def checkTense(content):
     
  
  
-def check(content,tensechecker):
+def check(content):
     '检查内容中的语法错误'
  
+    global tensechecker
     issues = []
     issues += tensechecker.work(content)
     issues += tensechecker.work(content)
@@ -41,5 +43,4 @@ def check(content,tensechecker):
     return issues # List of issues'''
  
  
-tensechecker=tense.Tense()
-print(check("The fox is big, grew bigger. The rat was small but runs quickly."),tensechecker)
+print(check("The fox is big, grew bigger. The rat was small but runs quickly."))

@@ -86,7 +86,13 @@ class reader(object):
         if verb in self.ldict:
             word=self.ldict[verb]
             if (word+tag) not in self.cldict:
-                self.cldict[word+tag]=verb
+                self.cldict[word+tag]={verb:1}
+            else:
+                if verb in self.cldict[word+tag]:
+                    self.cldict[word+tag][verb]+=1
+                else:
+                    self.cldict[word+tag][verb]=1
+
             return word
         else:
             params = {'properties' : r"{'annotators': 'lemma', 'outputFormat': 'json'}"}
@@ -119,8 +125,15 @@ class reader(object):
                     if self.pointer==self.readlength:
                         self.pointer=0
                         print('epoch')
-                        with open('train/cldict','wb') as f2:
-                            pickle.dump(self.cldict,f2)
+                        with open('train/cldict2','wb') as f2:
+                            cldict2=dict()
+                            for i in self.cldict:
+                                maxf=0
+                                for j in i:
+                                    if maxf<self.cldict[i][j]:
+                                        maxf=self.cldict[i][j]
+                                        cldict2[i]=j
+                            pickle.dump(cldict2,f2)
                         return
 
                 outword=[]

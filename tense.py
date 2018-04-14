@@ -13,6 +13,7 @@ class Tense(object):
             import tensorflow as tf
             import time
             import os
+            os.environ["CUDA_VISIBLE_DEVICES"]="1"#环境变量：使用第一块gpu
             import pickle
             import sys, getopt
             #from papersmith.editor.grammar import tensereader
@@ -25,7 +26,7 @@ class Tense(object):
             return
 
         #dir0='papersmith/editor/grammar/tense/'
-        self.dir0='tense/'
+        self.dir0='train/'
 #神经网络的输入是一句只有一个动词的句子（以及其语法树），把动词变为原型，语法树的tag变为了VB。
 #并预测它的动词时态。如果它不为0，输入变为这句话以及他前面的patchlength句话。
 #语法树结构：（VB love）会被变为三个标签：（VB的（100维）one-hot标签，love的词向量标签，反括号对应的全0标签。
@@ -33,12 +34,13 @@ class Tense(object):
         self.config=tf.ConfigProto()
         self.config.gpu_options.per_process_gpu_memory_fraction=0.45#占用45%显存
         self.config.gpu_options.allow_growth = True
+        self.batch_size=50
 
 #input
         self.model=tensernnmodel.rnnmodel(vocab_single=6,\
                     maxlength=700,\
                     embedding_size=100,\
-                    batch_size=1,\
+                    batch_size=self.batch_size,\
                     num_verbs=1)
 
         with open(self.dir0+'cldict','rb') as f:
@@ -49,10 +51,10 @@ class Tense(object):
             session=tf.Session(config=self.config)
             session.run(tf.global_variables_initializer())#初始化变量
             saver=tf.train.Saver()
-            ckpt = tf.train.get_checkpoint_state(self.dir0+'p'+str(i)+'n1')
+            ckpt = tf.train.get_checkpoint_state('ckpt2/p'+str(i)+'n1')
             if ckpt==None:
                 print('checkpoint not found. skip tense.')
-                return []
+                return
             saver.restore(session, ckpt.model_checkpoint_path)
             self.sessionlist.append(session)
 
@@ -72,6 +74,7 @@ class Tense(object):
         import tensorflow as tf
         import time
         import os
+        os.environ["CUDA_VISIBLE_DEVICES"]="1"#环境变量：使用第一块gpu
         import pickle
         import sys, getopt
         #from papersmith.editor.grammar import tensereader
@@ -83,7 +86,7 @@ class Tense(object):
 #multi-time test
         suggests=[]
         while True:
-            inputs,pads,poses,words,total,answers=self.reader.list_tags(1)
+            inputs,pads,poses,words,total,answers=self.reader.list_tags(self.batch_size)
             if inputs==None:
                 return suggests
             for multitime in range(min(total,4)):
@@ -98,6 +101,7 @@ class Tense(object):
         import tensorflow as tf
         import time
         import os
+        os.environ["CUDA_VISIBLE_DEVICES"]="1"#环境变量：使用第一块gpu
         import pickle
         import sys, getopt
         suggests=[]
