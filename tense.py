@@ -89,7 +89,7 @@ class Tense(object):
             inputs,pads,poses,words,total,answers=self.reader.list_tags(self.batch_size)
             if inputs==None:
                 return suggests
-            for multitime in range(4):
+            for multitime in range(3):
                 suggestion=self.worksess(multitime,inputs,pads,poses,words,total,answers)
                 suggests.extend(suggestion)
 
@@ -119,21 +119,23 @@ class Tense(object):
                 mem=tf.argmax(pred[i]).eval(session=session)
                 pred[i][tf.argmax(pred[i]).eval(session=session)]=-100
                 if tf.argmax(pred[i]).eval(session=session) != answers[i][multitime]:
-                    level=1
-                else:
-                    level=2
+                    pred[i][tf.argmax(pred[i]).eval(session=session)]=-100
+                    if tf.argmax(pred[i]).eval(session=session) != answers[i][multitime]:
+                        level=1
+                    else:
+                        level=2
 
-                try:
-                    temp=poses[i][multitime][:]
-                    newword=self.cldict[self.reader.lemma(words[i][multitime])+'('+self.reader.printtag(mem)]
-                    if(newword!=words[i][multitime]):
-                        temp.append(newword)
-                    #temp.append(words[i][multitime]+' '+self.reader.printtag(answers[i][multitime])+'改为'+self.reader.printtag(mem))
-                        temp.append(level)
-                        suggests.append(temp)
-                except:
-                    print('err')
-                    pass
+                    try:
+                        temp=poses[i][multitime][:]
+                        newword=self.cldict[self.reader.lemma(words[i][multitime])+'('+self.reader.printtag(mem)]
+                        if(newword!=words[i][multitime]):
+                            temp.append(newword)
+                        #temp.append(words[i][multitime]+' '+self.reader.printtag(answers[i][multitime])+'改为'+self.reader.printtag(mem))
+                            temp.append(level)
+                            suggests.append(temp)
+                    except:
+                        print('err')
+                        pass
         print('worksess: ',multitime,'sug', suggests)
 #        pred=pred[0]
         return suggests
