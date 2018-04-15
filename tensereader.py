@@ -39,8 +39,9 @@ class reader(object):
                 #print( re.sub('\s+',' ',content['sentences'][:]['parse'].replace('\n',' ')))
                 #return re.sub('\s+',' ',content['sentences'][:]['parse'].replace('\n',' '))
                 return [i['parse'] for i in content['sentences']]
-            except ConnectionRefusedError:
+            except:# ConnectionRefusedError:
                 print('Stnlp connection refused. Retrying...')
+                print(resp)
     def __init__(self,\
                 content,\
                 patchlength=3,\
@@ -93,6 +94,7 @@ class reader(object):
             resp = requests.post(self.url, verb, params=params).text
             content=json.loads(resp)
             word=content['sentences'][0]['tokens'][0]['lemma']
+            print('errverb',verb)
             self.ldict[verb]=word
             return word
 

@@ -1,0 +1,50 @@
+Such a growth pattern of I  is a low frequency signal compared with the high frequency noise contained in Z.
+8 shows the observation data Z after filtered by a first-order low-pass filter.4 Fig.
+8 shows that the observation data Z from the 1024block monitoring system represents better a worm's propagation pattern than the 16-block monitoring system.
+Worm propagation in other Blaster simulation runs give similar results to what shown in Fig.
+On occasion the 16-block monitoring system provides as good observation as the 1024-block monitoring system.
+However, the 1024-block monitoring system provides stable observations in all simulation runs, while the 16-block monitoring system provides very poor observations in many instances.
+Summarizing the analysis above yields.
+In order to monitor the propagation of a non-uniform scan worm in the Internet, especially the propagation of a sequential scan worm, the address space covered by a monitoring system should be as distributed as possible.
+Conclusion Like earthquake modeling or tornado modeling, a good Internet worm model can:  give us deep understanding of the dynamics of a worm;  provide the simulation basis for accurately evaluating the performance of various worm defense systems and  help us to generate effective early warning  and provide accurate worm damage prediction.
+For these purposes, based on a uniform modeling framework, we model and analyze many different worms that use various scanning strategies, including uniform scan, hit-list scan, routing scan, local preference scan, cooperative scan, sequential scan, divide-and-conquer scan, target scan, destructive scan, etc.
+Although most conclusions drawn in this paper are intuitively clear, we prove them through sound mathematical models that have the same underlying principles.
+The analysis in this paper makes it clear how different scanning strategies are related with each other.
+We hope this paper could provide a solid framework on Internet worm modeling and help us to better understand and defend against future Internet worm attacks.
+Acknowledgements We gratefully thank researchers in University of Michigan "Internet Motion Sensor" for providing us their monitoring data on Witty worm propagation.
+Gray, G. Bakos, Using sensor networks and data fusion for early detection of active worms, Proceedings of the SPIE AeroSense, 2003.
+The spread of the witty worm.
+Daley, J. Gani, Epidemic Modeling: An Introduction, Cambridge University Press, 1999.
+White, Computers and epidemiology, IEEE Spectr.
+White, Directed-graph epidemiological models of computer viruses, Proceedings of IEEE Symposium on Security and Privacy, 1991, pp.
+White, Measuring and modeling computer virus prevalence, Proceedings of IEEE Symposium on Security and Privacy, 1993.
+Brown, Code-Red: a case study on the spread and victims of an Internet worm, Proceedings of the Second ACM SIGCOMM Workshop on Internet Measurement, 2002 November.
+Voelker, S. Savage, Network Telescopes: Technical Report.
+Zou, L. Gao, W. Gong, D. Towsley, Monitoring and early warning for Internet worms, Proceedings of 10th ACM Conference on Computer and Communications Security , 2003 October.
+Zou, W. Gong, D. Towsley, Code Red worm propagation modeling and analysis, Proceedings of 9th ACM Conference on Computer and Communications Security , 2002 October.
+Cliff C. Zou received his PhD degree in electrical and computer engineering from University of Massachusetts, Amherst in 2005, his BSc degree and MSc degree in electrical engineering from University of Science and Technology of China, Hefei, China in 1996 and 1999, respectively.
+Currently, he is an assistant professor in the School of Computer Science in the University of Central Florida.
+His research interests include computer and network security, network modeling and performance evaluation.
+From 1976 to 1985 he was a member of the faculty of the Department of Electrical and Computer Engineering at the University of Massachusetts, Amherst.
+He is currently a distinguished professor at the University of Massachusetts in the Department of Computer Science.
+He has held visiting positions at IBM T.J. Watson Research Center, Yorktown Heights, NY; Laboratoire MASI, Paris, France; INRIA, Sophia-Antipolis, France; AT&T Labs - Research, Florham Park, NJ and Microsoft Research Lab, Cambridge, UK.
+His research interests include networks and performance evaluation.
+He currently serves on the editorial board of Journal of the ACM and IEEE Journal on Selected Areas in Communications and has previously served on several editorial boards including those of the IEEE Transactions on Communications and IEEE/ACM Transactions on Networking.
+He was a program cochair of the joint ACM SIGMETRICS and PERFORMANCE '92 conference and the Performance 2002 conference.
+He is a member of ACM and ORSA, and Chair of IFIP Working Group 7.3.
+He has received the 1998 IEEE Communications Society William Bennett Best Paper Award and numerous best conference/workshop paper awards.
+Last, he has been elected fellow of both the ACM and IEEE.
+Weibo Gong  received his PhD degree from Harvard University in 1987, and have been with the Department of Electrical and Computer Engineering, University of Massachusetts, Amherst since then.
+He is also an adjunct professor in the Department of Computer Science at the same campus.
+His major research interests include control and systems methods in communication networks, network security and network modeling and analysis.
+He is a receipient of the IEEE Transactions on Automatic Control's George Axelby Outstanding paper award, an IEEE Fellow and the Program Committee Chair for the 43rd IEEE Conference on Decision and Control.
+This talk summarizes our progress towards a fully transparent, flexible, and scalable thin-film image sensor.
+In contrast to conventional image sensors, it does not capture pixels in image space on the sensor surface, but makes integral measurements in Radon space along the sensor's edges.
+Image reconstruction is achieved by inverse Radon transform.
+By stacking multiple layers, it enables a variety of information, such as color, dynamic range, spatial resolution, and defocus, to be sampled simultaneously.
+Multi-focal imaging allows reconstructing an entire focal stack after only one recording.
+The focal stack can then be applied to estimate depth from defocus.
+Measuring and classifying directly in Radon space yields robust and high classification rates.
+Dimensionality reduction results in task-optimized classification sensors that record a minimal number of samples.
+This enables simple devices with low power consumption and fast readout times.
+Combining our sensing approach with lensless coded aperture imaging has the potential to enable entire thin-film camera systems that make the capturing of images, light fields, and depth information possible.

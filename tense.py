@@ -8,7 +8,6 @@ class Tense(object):
         try:
             import word2vec
             import requests
-            import json
             import numpy as np
             import tensorflow as tf
             import time
@@ -69,7 +68,6 @@ class Tense(object):
             return []
         import word2vec
         import requests
-        import json
         import numpy as np
         import tensorflow as tf
         import time
@@ -96,7 +94,6 @@ class Tense(object):
     def worksess(self,multitime,inputs,pads,poses,words,total,answers):
         import word2vec
         import requests
-        import json
         import numpy as np
         import tensorflow as tf
         import time
@@ -142,12 +139,13 @@ class Tense(object):
         #print(pred,type(pred))
 #累加计算平均正确率
 
-tensechecker=Tense()
+if __name__=='__main__':
+    tensechecker=Tense()
 #print(tensechecker.work("The fox is big, grew bigger. The rat was small but runs quickly. The fox is big, grew bigger. The rat was small but runs quickly."))
-with open('testinput2.txt') as f:
-    content=f.read()
-    result=tensechecker.work(content)
-    print('num:',len(result))
-    print('result:',result)
-    for i in result:
-        print(content[i[0]-50:i[0]]+'('+content[i[0]:i[1]]+')'+content[i[1]:i[1]+50]+'\nchange to: '+str(i[2])+' level: '+str(i[3])+'\n')
+    with open('testinput4.txt') as f:
+        content=f.read()
+        result=tensechecker.work(content)
+        print('num:',len(result))
+        print('result:',result)
+        for i in result:
+            print(content[i[0]-50:i[0]]+'('+content[i[0]:i[1]]+')'+content[i[1]:i[1]+50]+'\nchange to: '+str(i[2])+' level: '+str(i[3])+'\n')
