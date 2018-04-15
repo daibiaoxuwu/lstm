@@ -71,6 +71,7 @@ class reader(object):
         #parse
         self.resp=self.parse(content)
         self.readlength=len(self.resp)
+        print('rdlng',self.readlength)
         self.pointer=0
         for _ in range(self.patchlength):
             self.oldqueue.put(self.resp[0])
@@ -112,6 +113,8 @@ class reader(object):
 
                 outword=[]
                 answer=[]
+                word=[]
+                pose=[]
                 total=0
 #筛选只有一个动词的句子                
                 for tag in sentence.split():
@@ -179,8 +182,8 @@ class reader(object):
                             if node:
                                 if node.group(1) in self.model:
                                     if vbflag==1:
-                                        poses.append(self.numtopos[self.pointer-1][tagcount])
-                                        words.append(node.group(1))
+                                        pose.append(self.numtopos[self.pointer-1][tagcount])
+                                        word.append(node.group(1))
 #去除时态
                                         node2=self.lemma(node.group(1))
                                         if node2 in self.model:
@@ -205,6 +208,8 @@ class reader(object):
                 outword=np.pad(outword,((0,self.maxlength-outword.shape[0]),(0,0)),'constant')
                 inputs.append(outword)
                 answers.append(answer)
+                poses.append(pose)
+                words.append(word)
 
 #            inputs=np.array(inputs)
 #构建输出
@@ -213,6 +218,6 @@ class reader(object):
             return inputs,pads,poses,words,total,answers
 
 if __name__ == '__main__':
-    model = reader('The fox is big.The foxes are bigger.')
-    print('1a',model.list_tags(1))
+    model = reader('The fox is big.The foxes are bigger.The fox is big.The foxes are bigger.')
+    print('1a',model.list_tags(4))
     print('2a',model.list_tags(1))

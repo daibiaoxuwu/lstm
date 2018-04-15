@@ -61,7 +61,7 @@ class reader(object):
                 if node:
                     initial+=' '+node.group(1)
         return initial
-    def work(self,a,posdict):
+    def work(self,a):
         url = 'http://166.111.139.15:9000'
         params = {'properties' : r"{'annotators': 'tokenize,ssplit,pos,lemma,parse,depparse', 'outputFormat': 'json'}"}
         while True:
@@ -70,8 +70,8 @@ class reader(object):
                 break
             except ConnectionRefusedError:
                 print('error, retrying...')
-#        print(resp)
-#        input()
+        #print(resp)
+        #input()
         try:
             content=json.loads(resp)
         except:
@@ -79,16 +79,10 @@ class reader(object):
             return 1
         for sentence in content['sentences']:
             for i in sentence['enhancedPlusPlusDependencies']:
-                for j in i:
-                    if i['dep']=='nsubjpass':
-                        #print(i)
-                        #input()
-#                        print(posdict)
-                        if posdict[i['governor']]<4:
- #                           print(':\n',a,posdict[i['governor']]+1)
-                            return posdict[i['governor']]+1
-                        else:
-                            return 0
+                if 'nsubjpass' in i.values():
+                    return 1
+              #  else:
+              #      print('notin:\n',i)
         return 0
         
 
@@ -228,9 +222,6 @@ class reader(object):
                 self.oldqueue.put(sentence)
                 self.oldqueue.get()
                 #print('point at:',self.resp.tell())
-                posdict=dict()
-                verbcount=0
-                wordcount=0
 
 #本句                
                 for tag in sentence.split():
@@ -253,7 +244,6 @@ class reader(object):
                             if not self.shorten:
                                 outword.append(tagword)
                     else:
-                        wordcount+=1
                         if mdflag==0:
                             node=re.match('([^\)]+)(\)*)',tag.strip())
                             if node:
@@ -264,11 +254,7 @@ class reader(object):
                                         if node2 in self.model:
                                             if not (node2=='is' or node2=='have'):#去除is,have
 
-                                                posdict[wordcount]=verbcount
-                                                verbcount+=1
                                                 outword.append(self.model[node2].tolist())
-
-
                                         else:
                                             outword.append([0]*self.embedding_size)
                                     else:
@@ -284,8 +270,8 @@ class reader(object):
 #句子过长
                 if outword.shape[0]>self.maxlength:
                     continue
-                temp=[0]*5
-                qq=self.work(self.cleanclear(sentence),posdict)
+                temp=[0,0]
+                qq=self.work(self.cleanclear(sentence))
                 temp[qq]=1
         #        print(self.clean(sentence),qq)
         #        input()

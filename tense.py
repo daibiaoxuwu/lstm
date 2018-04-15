@@ -1,5 +1,5 @@
 #encoding:utf-8
-#run3.py 只看含有两个动词的句子
+#注意 batchsize是50,提高速度但是扔掉最后不足50的部分.
 
 class Tense(object):
 
@@ -34,7 +34,7 @@ class Tense(object):
         self.config=tf.ConfigProto()
         self.config.gpu_options.per_process_gpu_memory_fraction=0.45#占用45%显存
         self.config.gpu_options.allow_growth = True
-        self.batch_size=50
+        self.batch_size=20
 
 #input
         self.model=tensernnmodel.rnnmodel(vocab_single=6,\
@@ -89,7 +89,7 @@ class Tense(object):
             inputs,pads,poses,words,total,answers=self.reader.list_tags(self.batch_size)
             if inputs==None:
                 return suggests
-            for multitime in range(min(total,4)):
+            for multitime in range(4):
                 suggestion=self.worksess(multitime,inputs,pads,poses,words,total,answers)
                 suggests.extend(suggestion)
 
@@ -113,6 +113,8 @@ class Tense(object):
         #print(answers,pred)
         #print(tf.argmax(pred[0]).eval(session=session) )
         for i in range(len(pred)):
+            if len(answers[i])<=multitime:
+                continue
             if tf.argmax(pred[i]).eval(session=session) != answers[i][multitime]:
                 mem=tf.argmax(pred[i]).eval(session=session)
                 pred[i][tf.argmax(pred[i]).eval(session=session)]=-100
@@ -122,22 +124,28 @@ class Tense(object):
                     level=2
 
                 try:
-                    temp=poses[multitime]
-                    newword=self.cldict[self.reader.lemma(words[multitime])+'('+self.reader.printtag(mem)]
-                    if(newword!=words[multitime]):
+                    temp=poses[i][multitime][:]
+                    newword=self.cldict[self.reader.lemma(words[i][multitime])+'('+self.reader.printtag(mem)]
+                    if(newword!=words[i][multitime]):
                         temp.append(newword)
-                    #temp.append(words[multitime]+' '+self.reader.printtag(answers[i][multitime])+'改为'+self.reader.printtag(mem))
+                    #temp.append(words[i][multitime]+' '+self.reader.printtag(answers[i][multitime])+'改为'+self.reader.printtag(mem))
                         temp.append(level)
                         suggests.append(temp)
                 except:
+                    print('err')
                     pass
-                    #print(suggests)
+        print('worksess: ',multitime,'sug', suggests)
 #        pred=pred[0]
         return suggests
         #print(pred,type(pred))
 #累加计算平均正确率
 
 tensechecker=Tense()
-#print(tensechecker.work("The fox is big, grew bigger. The rat was small but runs quickly."))
+#print(tensechecker.work("The fox is big, grew bigger. The rat was small but runs quickly. The fox is big, grew bigger. The rat was small but runs quickly."))
 with open('testinput2.txt') as f:
-    print(tensechecker.work(f.read()))
+    content=f.read()
+    result=tensechecker.work(content)
+    print('num:',len(result))
+    print('result:',result)
+    for i in result:
+        print(content[i[0]-50:i[0]]+'('+content[i[0]:i[1]]+')'+content[i[1]:i[1]+50]+'\nchange to: '+str(i[2])+' level: '+str(i[3])+'\n')

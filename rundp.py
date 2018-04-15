@@ -156,7 +156,7 @@ data=reader.reader(patchlength=patchlength,\
             passnum=passnum)
 
 
-model=rnnmodel.rnnmodel(vocab_single=2,\
+model=rnnmodel.rnnmodel(vocab_single=5,\
             maxlength=maxlength,\
             embedding_size=embedding_size,\
             initial_training_rate=initial_training_rate,\
